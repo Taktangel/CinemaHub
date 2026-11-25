@@ -92,7 +92,7 @@ private fun CinemaApp() {
                 2 -> PersonalLibraryScreen(onOpenSources = { activeMovie = it; selectedTab = 4 })
                 3 -> CatalogAdapterSettingsScreen(onOpenProviders = { selectedTab = 5 })
                 5 -> ProviderDirectoryScreen(onBack = { selectedTab = 3 }, onOpenAniLiberty = { selectedTab = 6 })
-                6 -> AniLibertySearchScreen(onBack = { selectedTab = 5 })
+                6 -> AniLibertySearchScreen(onBack = { selectedTab = 5 }, onPlayBuiltIn = { playing = it })
                 4 -> SourcesScreen(onPlay = { playing = it }, onBack = { selectedTab = if (activeMovie != null) 2 else 0; activeMovie = null }, movie = activeMovie, onPlayed = { MediaLibrary.recordPlayed(context, it) })
                 else -> TmdbScreen(searchMode = false, onOpenSources = { activeMovie = it; selectedTab = 4 })
             }
