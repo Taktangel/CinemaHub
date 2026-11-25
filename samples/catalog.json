@@ -1,0 +1,12 @@
+{
+  "name": "CinemaHub Demo Catalog (NOT full movies)",
+  "items": [
+    {
+      "tmdb_id": 550,
+      "media_type": "movie",
+      "title": "Тестовый ролик (не фильм)",
+      "url": "https://assets.testfiles.dev/video/sample-3s.mp4",
+      "attribution": "Demo clip from TestFiles.dev. Not the movie associated with TMDB 550."
+    }
+  ]
+}
