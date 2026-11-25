@@ -19,6 +19,8 @@ import coil.compose.AsyncImage
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.runInterruptible
 import org.json.JSONObject
 import java.net.URLEncoder
 
@@ -90,7 +92,9 @@ fun TmdbScreen(searchMode: Boolean, onOpenSources: (LibraryMovie) -> Unit) {
         loading = true
         error = null
         try {
-            items = withContext(Dispatchers.IO) { fetchTmdb(savedKey, query, searchMode) }
+            items = runInterruptible(Dispatchers.IO) { fetchTmdb(savedKey, query, searchMode) }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             error = e.message ?: "Не удалось подключиться к TMDB"
             items = emptyList()
