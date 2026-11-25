@@ -1,6 +1,7 @@
 package com.cinemahub.app
 
 import android.os.Bundle
+import androidx.activity.compose.BackHandler
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
@@ -56,6 +57,22 @@ private fun CinemaApp() {
     var animeReturnTab by remember { mutableIntStateOf(5) }
     val context = androidx.compose.ui.platform.LocalContext.current
 
+    // Explicit in-app back navigation. Never leave the user trapped on a nested
+    // Settings / provider / search route after a failed network request.
+    BackHandler(enabled = playing != null || selectedFilm != null || selectedTab != 0) {
+        when {
+            playing != null -> playing = null
+            selectedFilm != null -> selectedFilm = null
+            selectedTab == 6 -> { activeAnime = null; selectedTab = animeReturnTab }
+            selectedTab == 5 -> selectedTab = 3
+            selectedTab == 4 -> {
+                selectedTab = if (activeMovie != null) 2 else 0
+                activeMovie = null
+            }
+            else -> selectedTab = 0
+        }
+    }
+
     Surface(color = Color(0xFF0D1016), modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
             Row(
@@ -70,10 +87,10 @@ private fun CinemaApp() {
                     Text(" HUB", color = Color(0xFF9B8CFF), fontSize = 18.sp, fontWeight = FontWeight.Bold)
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    Icon(Icons.Default.Home, contentDescription = "Главная", tint = if (selectedTab == 0) Color(0xFF9B8CFF) else Color.LightGray, modifier = Modifier.clickable { selectedTab = 0 })
-                    Icon(Icons.Default.Search, contentDescription = "Поиск", tint = if (selectedTab == 1) Color(0xFF9B8CFF) else Color.LightGray, modifier = Modifier.clickable { selectedTab = 1 })
-                    Icon(Icons.Default.Favorite, contentDescription = "Избранное", tint = if (selectedTab == 2) Color(0xFF9B8CFF) else Color.LightGray, modifier = Modifier.clickable { selectedTab = 2 })
-                    Icon(Icons.Default.Settings, contentDescription = "Настройки", tint = if (selectedTab == 3) Color(0xFF9B8CFF) else Color.LightGray, modifier = Modifier.clickable { selectedTab = 3 })
+                    Icon(Icons.Default.Home, contentDescription = "Главная", tint = if (selectedTab == 0) Color(0xFF9B8CFF) else Color.LightGray, modifier = Modifier.clickable { selectedFilm = null; activeAnime = null; selectedTab = 0 })
+                    Icon(Icons.Default.Search, contentDescription = "Поиск", tint = if (selectedTab == 1) Color(0xFF9B8CFF) else Color.LightGray, modifier = Modifier.clickable { selectedFilm = null; selectedTab = 1 })
+                    Icon(Icons.Default.Favorite, contentDescription = "Избранное", tint = if (selectedTab == 2) Color(0xFF9B8CFF) else Color.LightGray, modifier = Modifier.clickable { selectedFilm = null; selectedTab = 2 })
+                    Icon(Icons.Default.Settings, contentDescription = "Настройки", tint = if (selectedTab == 3) Color(0xFF9B8CFF) else Color.LightGray, modifier = Modifier.clickable { selectedFilm = null; selectedTab = 3 })
                 }
             }
             if (playing == null) {
