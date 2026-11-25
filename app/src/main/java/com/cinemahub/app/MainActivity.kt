@@ -53,6 +53,7 @@ private fun CinemaApp() {
     var playing by remember { mutableStateOf<StreamItem?>(null) }
     var activeMovie by remember { mutableStateOf<LibraryMovie?>(null) }
     var activeAnime by remember { mutableStateOf<AniLibertyRelease?>(null) }
+    var animeReturnTab by remember { mutableIntStateOf(5) }
     val context = androidx.compose.ui.platform.LocalContext.current
 
     Surface(color = Color(0xFF0D1016), modifier = Modifier.fillMaxSize()) {
@@ -92,13 +93,13 @@ private fun CinemaApp() {
                 1 -> TmdbScreen(searchMode = true, onOpenSources = { activeMovie = it; selectedTab = 4 })
                 2 -> PersonalLibraryScreen(onOpenSources = { activeMovie = it; selectedTab = 4 })
                 3 -> CatalogAdapterSettingsScreen(onOpenProviders = { selectedTab = 5 })
-                5 -> ProviderDirectoryScreen(onBack = { selectedTab = 3 }, onOpenAniLiberty = { selectedTab = 6 })
-                6 -> AniLibertySearchScreen(onBack = { activeAnime = null; selectedTab = 5 }, onPlayBuiltIn = { playing = it }, initialRelease = activeAnime)
+                5 -> ProviderDirectoryScreen(onBack = { selectedTab = 3 }, onOpenAniLiberty = { activeAnime = null; animeReturnTab = 5; selectedTab = 6 })
+                6 -> AniLibertySearchScreen(onBack = { activeAnime = null; selectedTab = animeReturnTab }, onPlayBuiltIn = { playing = it }, initialRelease = activeAnime)
                 4 -> SourcesScreen(onPlay = { playing = it }, onBack = { selectedTab = if (activeMovie != null) 2 else 0; activeMovie = null }, movie = activeMovie, onPlayed = { MediaLibrary.recordPlayed(context, it) })
                 else -> Column(Modifier.fillMaxSize()) {
                     AniLatestReleasesSection(
-                        onSelect = { activeAnime = it; selectedTab = 6 },
-                        onMore = { activeAnime = null; selectedTab = 6 }
+                        onSelect = { activeAnime = it; animeReturnTab = 0; selectedTab = 6 },
+                        onMore = { activeAnime = null; animeReturnTab = 0; selectedTab = 6 }
                     )
                     Box(Modifier.weight(1f)) {
                         TmdbScreen(searchMode = false, onOpenSources = { activeMovie = it; selectedTab = 4 })
