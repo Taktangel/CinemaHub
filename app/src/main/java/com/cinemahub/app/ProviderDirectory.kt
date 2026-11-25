@@ -38,7 +38,7 @@ object CinemaProviders {
         ),
         CinemaProvider(
             "anilibria", "AniLibria / AniLiberty", "https://anilibria.tv/",
-            "Архивный домен AniLiberty. Официальные API и актуальные домены требуют отдельной проверки.",
+            "Поиск аниме через актуальный публичный API AniLiberty v1; старые API v2/v3 не поддерживаются.",
             ProviderCapability.WEBSITE
         ),
         CinemaProvider(
