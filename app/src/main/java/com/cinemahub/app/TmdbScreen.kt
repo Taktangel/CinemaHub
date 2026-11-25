@@ -1,6 +1,7 @@
 package com.cinemahub.app
 
 import android.content.Context
+import coil.ImageLoader
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -19,8 +20,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
-import java.net.HttpURLConnection
-import java.net.URL
 import java.net.URLEncoder
 
 private data class TmdbItem(
@@ -46,41 +45,23 @@ private fun fetchTmdb(apiKey: String, query: String, searchMode: Boolean): List<
             append(URLEncoder.encode(query, "UTF-8"))
         }
     }
-    val connection = URL(request).openConnection() as HttpURLConnection
-    try {
-        connection.connectTimeout = 10000
-        connection.readTimeout = 10000
-        connection.requestMethod = "GET"
-        val status = connection.responseCode
-        if (status !in 200..299) {
-            throw IllegalStateException(
-                when (status) {
-                    401 -> "Неверный API Key TMDB (v3). Проверь ключ."
-                    429 -> "TMDB временно ограничил число запросов."
-                    else -> "Ошибка TMDB: HTTP $status"
-                }
-            )
+    val response = TmdbNetwork.readJson(request)
+    val json = JSONObject(response).getJSONArray("results")
+    return buildList {
+        for (i in 0 until json.length()) {
+            val item = json.getJSONObject(i)
+            val kind = item.optString("media_type", "movie")
+            if (kind == "person") continue
+            add(TmdbItem(
+                id = item.optInt("id"),
+                title = item.optString("title").ifBlank { item.optString("name", "Без названия") },
+                date = item.optString("release_date").ifBlank { item.optString("first_air_date") },
+                overview = item.optString("overview"),
+                poster = item.optString("poster_path").takeIf { it.startsWith("/") },
+                rating = item.optDouble("vote_average", 0.0),
+                kind = kind
+            ))
         }
-        val response = connection.inputStream.bufferedReader().use { it.readText() }
-        val json = JSONObject(response).getJSONArray("results")
-        return buildList {
-            for (i in 0 until json.length()) {
-                val item = json.getJSONObject(i)
-                val kind = item.optString("media_type", "movie")
-                if (kind == "person") continue
-                add(TmdbItem(
-                    id = item.optInt("id"),
-                    title = item.optString("title").ifBlank { item.optString("name", "Без названия") },
-                    date = item.optString("release_date").ifBlank { item.optString("first_air_date") },
-                    overview = item.optString("overview"),
-                    poster = item.optString("poster_path").takeIf { it.startsWith("/") },
-                    rating = item.optDouble("vote_average", 0.0),
-                    kind = kind
-                ))
-            }
-        }
-    } finally {
-        connection.disconnect()
     }
 }
 
@@ -88,7 +69,8 @@ private fun fetchTmdb(apiKey: String, query: String, searchMode: Boolean): List<
 fun TmdbScreen(searchMode: Boolean, onOpenSources: () -> Unit) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val prefs = remember(context) { context.getSharedPreferences("tmdb_settings", Context.MODE_PRIVATE) }
-    var savedKey by remember { mutableStateOf(prefs.getString("api_key_v3", "") ?: "") }
+    val imageLoader = remember(context) { TmdbNetwork.imageLoader(context) }
+    var savedKey by remember { mutableStateOf((prefs.getString("api_key_v3", "") ?: "").ifBlank { BuildConfig.TMDB_API_KEY }) }
     var enteredKey by remember { mutableStateOf("") }
     var query by remember { mutableStateOf("") }
     var items by remember { mutableStateOf<List<TmdbItem>>(emptyList()) }
@@ -147,6 +129,7 @@ fun TmdbScreen(searchMode: Boolean, onOpenSources: () -> Unit) {
                 AsyncImage(
                     model = film.poster?.let { "https://image.tmdb.org/t/p/w500$it" },
                     contentDescription = film.title,
+                    imageLoader = imageLoader,
                     modifier = Modifier.fillMaxWidth().height(280.dp)
                 )
                 Text("${film.date.take(4)} · ${if (film.kind == "tv") "Сериал" else "Фильм"} · TMDB ${"%.1f".format(film.rating)}", color = Color.LightGray)
@@ -166,7 +149,7 @@ fun TmdbScreen(searchMode: Boolean, onOpenSources: () -> Unit) {
                 }
                 TextButton(onClick = {
                     prefs.edit().remove("api_key_v3").apply()
-                    savedKey = ""
+                    savedKey = BuildConfig.TMDB_API_KEY
                     items = emptyList()
                 }) { Text("Сменить API-ключ") }
                 if (loading) LinearProgressIndicator(Modifier.fillMaxWidth())
@@ -182,6 +165,7 @@ fun TmdbScreen(searchMode: Boolean, onOpenSources: () -> Unit) {
                                 AsyncImage(
                                     model = item.poster?.let { "https://image.tmdb.org/t/p/w185$it" },
                                     contentDescription = "Постер ${item.title}",
+                                    imageLoader = imageLoader,
                                     modifier = Modifier.width(86.dp).height(126.dp)
                                 )
                             }
