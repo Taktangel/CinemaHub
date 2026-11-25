@@ -12,12 +12,30 @@ android {
         applicationId = "com.cinemahub.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 5
-        versionName = "0.4.1"
+        versionCode = 6
+        versionName = "0.5.0"
         // Optional personal-build key. Never commit an API key to the repository.
         val tmdbKey = providers.environmentVariable("TMDB_API_KEY").orNull.orEmpty()
         val sanitizedKey = tmdbKey.replace("\\", "\\\\").replace("\"", "\\\"")
         buildConfigField("String", "TMDB_API_KEY", "\"" + sanitizedKey + "\"")
+    }
+    // A persistent signing certificate makes Android updates installable over
+    // previous CinemaHub builds. Never put key material into Git.
+    val keyFile = providers.environmentVariable("CINEMAHUB_KEYSTORE_PATH").orNull
+    if (!keyFile.isNullOrBlank()) {
+        signingConfigs {
+            create("persistentDebug") {
+                storeFile = file(keyFile)
+                storePassword = providers.environmentVariable("CINEMAHUB_STORE_PASSWORD").orNull
+                keyAlias = providers.environmentVariable("CINEMAHUB_KEY_ALIAS").orNull
+                keyPassword = providers.environmentVariable("CINEMAHUB_KEY_PASSWORD").orNull
+            }
+        }
+        buildTypes {
+            getByName("debug") {
+                signingConfig = signingConfigs.getByName("persistentDebug")
+            }
+        }
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
