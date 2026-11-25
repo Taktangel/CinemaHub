@@ -105,7 +105,7 @@ fun AniLibertySearchScreen(onBack: () -> Unit) {
                         OutlinedButton(onClick = {
                             openProviderWebsite(
                                 context,
-                                "https://aniliberty.top/anime/releases/release/${release.id}"
+                                "https://aniliberty.top/anime/releases/${release.alias ?: release.id}"
                             )
                         }) { Text("Открыть на AniLiberty") }
                     }
