@@ -3,6 +3,8 @@ package com.cinemahub.app
 import android.content.Context
 import android.net.Uri
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -123,7 +125,9 @@ fun CatalogAdapterSettingsScreen(onOpenProviders: () -> Unit = {}) {
     var itemCount by remember { mutableStateOf<Int?>(null) }
     val valid = url.isBlank() || (url.startsWith("https://") && isSupportedStreamUrl(url))
 
-    Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        PlaybackSettingsSection()
+        HorizontalDivider()
         Text("Подключаемые источники", color = Color.White, style = MaterialTheme.typography.headlineSmall)
         Text("JSON-каталог связывает TMDB ID с разрешёнными HTTPS-потоками. Содержимое не загружается в GitHub.", color = Color.LightGray)
         OutlinedButton(onClick = onOpenProviders) { Text("AnimeGO / AniLibria / HdRezkaApi / 4PDA") }

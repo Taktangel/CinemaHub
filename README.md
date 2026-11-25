@@ -158,3 +158,13 @@ Version is `0.8.0` with `versionCode=9`. This change is stacked on the 0.7 featu
 ### AniLibria documentation version notice
 
 The user's reference repository [anilibria/docs](https://github.com/anilibria/docs) explicitly marks its historical `api.md`, `api_v2.md` and `api_v3.md` APIs as **DEPRECATED / retired**. Its README redirects developers to the current [AniLiberty API v1 documentation](https://anilibria.top/api/docs/v1). We intentionally use the modern public `GET /api/v1/app/search/releases?query=...` endpoint (AniLiberty host) for title search. The v1 API returns a JSON array of release objects. This implementation currently displays results and opens the provider site; it does not retrieve or play episodes. Verify public endpoint access and provider terms before expanding playback functionality.
+
+## v0.9 — AniLiberty episodes + preferred video player
+
+- From **Настройки → Каталог сайтов и API → AniLiberty → Поиск**, enter an anime title, choose a release, choose stream quality **Авто / 1080p / 720p / 480p**, and tap **▶ Смотреть серию**.
+- Uses the public API v1 endpoints `GET /app/search/releases?query=...`, `GET /anime/releases/{idOrAlias}` and `GET /anime/releases/episodes/{releaseEpisodeId}` under `https://aniliberty.top/api/v1`. The final episode request supplies up-to-date HLS URLs; not every quality exists for every episode.
+- **Настройки → Плеер по умолчанию**: select an installed VLC, Just Player, MX Player (regular/Pro), mpv-android, built-in player or **Спрашивать каждый раз**. Installed apps are detected by narrow Android `<queries>` package declarations. The preference persists in app-private data.
+- All streams on the **Источники** screen also use the chosen default player via **▶ Смотреть**; the direct built-in playback button remains available as a fallback.
+- If the selected external player was removed or can't handle the URL, CinemaHub shows Android's player chooser instead of silently failing.
+- AniLiberty is an external service. Playback depends on its server, the user's region/network and availability of CDN HLS streams. The app does not decrypt DRM, obtain private credentials, or bypass access control. Playback availability has not been confirmed on a physical phone.
+- Stable APK signing still requires an owner-controlled keystore in GitHub Actions secrets; new debug builds without one may require a one-time uninstall and will clear local preferences.

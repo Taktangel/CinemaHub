@@ -202,7 +202,7 @@ fun SourcesScreen(onPlay: (StreamItem) -> Unit, onBack: () -> Unit, movie: Libra
                         Spacer(Modifier.height(8.dp))
                         Button(onClick = {
                             playerMessage = try {
-                                openInExternalPlayer(context, stream.url)
+                                if (!PlaybackPreferences.launch(context, stream.url)) onPlay(stream)
                                 if (movie != null && (stream.id.startsWith("linked-") || stream.id.startsWith("catalog-"))) onPlayed(movie)
                                 null
                             } catch (_: ActivityNotFoundException) {
@@ -210,7 +210,7 @@ fun SourcesScreen(onPlay: (StreamItem) -> Unit, onBack: () -> Unit, movie: Libra
                             } catch (e: Exception) {
                                 "Не удалось открыть внешнее приложение: ${e.message}"
                             }
-                        }) { Text("▶ Внешний плеер") }
+                        }) { Text("▶ Смотреть") }
                         TextButton(onClick = {
                             if (movie != null && stream.id.startsWith("linked-")) onPlayed(movie)
                             onPlay(stream)

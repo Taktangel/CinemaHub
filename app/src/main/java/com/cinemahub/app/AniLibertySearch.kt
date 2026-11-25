@@ -10,6 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -22,7 +23,7 @@ import java.util.concurrent.TimeUnit
 
 data class AniLibertyRelease(val id: Int, val title: String, val alias: String?)
 
-private object AniLibertyApi {
+internal object AniLibertyApi {
     private val client = OkHttpClient.Builder()
         .connectTimeout(8, TimeUnit.SECONDS)
         .readTimeout(12, TimeUnit.SECONDS)
@@ -56,58 +57,131 @@ private object AniLibertyApi {
 }
 
 @Composable
-fun AniLibertySearchScreen(onBack: () -> Unit) {
+fun AniLibertySearchScreen(onBack: () -> Unit, onPlayBuiltIn: (StreamItem) -> Unit) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     var query by remember { mutableStateOf("") }
     var matches by remember { mutableStateOf<List<AniLibertyRelease>>(emptyList()) }
+    var selected by remember { mutableStateOf<AniLibertyRelease?>(null) }
+    var episodes by remember { mutableStateOf<List<LibertyEpisode>>(emptyList()) }
+    var quality by remember { mutableStateOf("Авто") }
     var loading by remember { mutableStateOf(false) }
+    var playLoading by remember { mutableStateOf<String?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(query) {
         matches = emptyList()
         error = null
         if (query.trim().length < 2) return@LaunchedEffect
-        delay(500)
+        delay(450)
         loading = true
         try {
             matches = AniLibertyApi.search(query)
         } catch (e: Exception) {
-            error = e.message ?: "Не удалось получить данные AniLiberty"
+            error = e.message ?: "Ошибка поиска AniLiberty"
         } finally {
             loading = false
         }
     }
+
     Column(Modifier.fillMaxSize().padding(16.dp)) {
-        TextButton(onClick = onBack) { Text("← К источникам") }
-        Text("Поиск AniLiberty", color = Color.White, style = MaterialTheme.typography.headlineSmall)
+        TextButton(onClick = {
+            if (selected != null) selected = null else onBack()
+        }) { Text("← Назад") }
+        Text("AniLiberty — серии и просмотр", color = Color.White,
+            style = MaterialTheme.typography.headlineSmall)
         Spacer(Modifier.height(8.dp))
-        Text(
-            "Публичный API v1 — поиск названий аниме. Результаты открываются на сайте AniLiberty; воспроизведение внутри CinemaHub ещё не подключено.",
-            color = Color.LightGray
-        )
-        OutlinedTextField(
-            value = query,
-            onValueChange = { query = it },
-            label = { Text("Название аниме") },
-            modifier = Modifier.fillMaxWidth(),
-            singleLine = true
-        )
+        if (selected == null) {
+            OutlinedTextField(
+                value = query, onValueChange = { query = it },
+                label = { Text("Название аниме") },
+                singleLine = true, modifier = Modifier.fillMaxWidth()
+            )
+        } else {
+            Text(selected!!.title, color = Color.White,
+                style = MaterialTheme.typography.titleLarge)
+            Spacer(Modifier.height(8.dp))
+            Text("Качество видео", color = Color.LightGray)
+            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                val choices = listOf("Авто", "1080p", "720p", "480p")
+                choices.forEachIndexed { index, q ->
+                    SegmentedButton(
+                        selected = quality == q,
+                        onClick = { quality = q },
+                        shape = SegmentedButtonDefaults.itemShape(index, choices.size)
+                    ) { Text(q) }
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+            Text("Серия запускается сразу в плеере, выбранном в настройках.",
+                color = Color.LightGray)
+        }
+
         if (loading) LinearProgressIndicator(Modifier.fillMaxWidth())
         error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-        if (!loading && query.trim().length > 1 && error == null && matches.isEmpty()) {
-            Text("Ничего не найдено или сервер вернул пустой список.", color = Color.LightGray)
-        }
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(matches, key = { it.id }) { release ->
-                ElevatedCard(modifier = Modifier.fillMaxWidth()) {
-                    Column(Modifier.padding(12.dp)) {
-                        Text(release.title, style = MaterialTheme.typography.titleMedium)
-                        OutlinedButton(onClick = {
-                            openProviderWebsite(
-                                context,
-                                "https://aniliberty.top/anime/releases/${release.alias ?: release.id}"
+        Spacer(Modifier.height(8.dp))
+        if (selected == null) {
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(matches, key = { it.id }) { release ->
+                    ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+                        Column(Modifier.padding(12.dp)) {
+                            Text(release.title, style = MaterialTheme.typography.titleMedium)
+                            Button(enabled = !loading, onClick = {
+                                scope.launch {
+                                    loading = true
+                                    error = null
+                                    try {
+                                        episodes = AniLibertyEpisodesApi.releaseEpisodes(release.id)
+                                        selected = release
+                                    } catch (e: Exception) {
+                                        error = e.message ?: "Не удалось получить серии"
+                                    } finally { loading = false }
+                                }
+                            }) { Text("Выбрать аниме") }
+                        }
+                    }
+                }
+            }
+        } else {
+            if (episodes.isEmpty() && !loading) {
+                Text("У этого релиза нет доступных серий.", color = Color.LightGray)
+            }
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(episodes, key = { it.id }) { episode ->
+                    ElevatedCard(modifier = Modifier.fillMaxWidth()) {
+                        Column(Modifier.padding(12.dp)) {
+                            Text(
+                                "Серия " + episode.number +
+                                    (if (episode.title.isNotBlank()) " · " + episode.title else ""),
+                                style = MaterialTheme.typography.titleMedium
                             )
-                        }) { Text("Открыть на AniLiberty") }
+                            Button(enabled = playLoading == null, onClick = {
+                                scope.launch {
+                                    playLoading = episode.id
+                                    error = null
+                                    try {
+                                        // Refresh HLS URLs just before playback. Query parameters may change.
+                                        val fresh = AniLibertyEpisodesApi.currentEpisode(episode.id)
+                                        val stream = fresh.stream(quality)
+                                            ?: throw IOException("Для выбранного качества нет HLS-ссылки")
+                                        val item = StreamItem(
+                                            "aniliberty-" + episode.id,
+                                            selected!!.title + " · серия " + episode.number +
+                                                " (" + stream.first + ")",
+                                            stream.second,
+                                            "AniLiberty API v1"
+                                        )
+                                        if (!PlaybackPreferences.launch(context, item.url)) {
+                                            onPlayBuiltIn(item)
+                                        }
+                                    } catch (e: Exception) {
+                                        error = e.message ?: "Не удалось запустить плеер"
+                                    } finally { playLoading = null }
+                                }
+                            }) {
+                                Text(if (playLoading == episode.id) "Загрузка..." else "▶ Смотреть серию")
+                            }
+                        }
                     }
                 }
             }
