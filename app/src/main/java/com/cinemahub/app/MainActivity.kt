@@ -90,7 +90,7 @@ private fun CinemaApp() {
             } else when (selectedTab) {
                 1 -> TmdbScreen(searchMode = true, onOpenSources = { activeMovie = it; selectedTab = 4 })
                 2 -> PersonalLibraryScreen(onOpenSources = { activeMovie = it; selectedTab = 4 })
-                3 -> EmptyPage("Настройки", "В следующих версиях здесь появятся настройки источников, плеера и интерфейса.")
+                3 -> CatalogAdapterSettingsScreen()
                 4 -> SourcesScreen(onPlay = { playing = it }, onBack = { selectedTab = if (activeMovie != null) 2 else 0; activeMovie = null }, movie = activeMovie, onPlayed = { MediaLibrary.recordPlayed(context, it) })
                 else -> TmdbScreen(searchMode = false, onOpenSources = { activeMovie = it; selectedTab = 4 })
             }
