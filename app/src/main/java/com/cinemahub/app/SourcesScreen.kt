@@ -82,12 +82,32 @@ fun SourcesScreen(onPlay: (StreamItem) -> Unit, onBack: () -> Unit, movie: Libra
     var customUrl by remember { mutableStateOf(prefs.getString("custom_url", "").orEmpty()) }
     var savedUrl by remember { mutableStateOf(customUrl) }
     var playerMessage by remember { mutableStateOf<String?>(null) }
+    var catalogItems by remember { mutableStateOf<List<CatalogEntry>>(emptyList()) }
+    var catalogError by remember { mutableStateOf<String?>(null) }
+    var catalogLoading by remember { mutableStateOf(false) }
+    var reloadCatalog by remember { mutableIntStateOf(0) }
+    LaunchedEffect(movie?.mediaKey, reloadCatalog) {
+        catalogItems = emptyList()
+        catalogError = null
+        if (!JsonCatalogAdapter.isEnabled(context)) return@LaunchedEffect
+        catalogLoading = true
+        try {
+            catalogItems = JsonCatalogAdapter.load(context)
+        } catch (e: Exception) {
+            catalogError = "Ошибка JSON-источника: ${e.message ?: "неизвестная ошибка"}"
+        } finally {
+            catalogLoading = false
+        }
+    }
     var movieUrl by remember(movie?.mediaKey) { mutableStateOf(movie?.let { MediaLibrary.videoUrl(context, it.mediaKey) }.orEmpty()) }
     var savedMovieUrl by remember(movie?.mediaKey) { mutableStateOf(movieUrl) }
     val ownFilmStream = if (movie != null && isSupportedStreamUrl(savedMovieUrl)) {
         listOf(StreamItem("linked-${movie.mediaKey}", movie.title, savedMovieUrl, "Мой источник для фильма"))
     } else emptyList()
-    val playable = ownFilmStream + registeredSources
+    val catalogStreams = catalogItems
+        .filter { movie == null || it.mediaKey == movie.mediaKey }
+        .map { it.stream }
+    val playable = ownFilmStream + catalogStreams + registeredSources
         .filter { source -> when (source.id) {
             "demo" -> demoEnabled
             "user" -> userEnabled
@@ -161,7 +181,15 @@ fun SourcesScreen(onPlay: (StreamItem) -> Unit, onBack: () -> Unit, movie: Libra
             Text("Сохрани поддерживаемую ссылку, чтобы она появилась в списке.", color = Color.LightGray)
         }
         Spacer(Modifier.height(12.dp))
-        Text("Доступные источники", color = Color.White, style = MaterialTheme.typography.titleMedium)
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text("Доступные источники", color = Color.White, style = MaterialTheme.typography.titleMedium)
+            TextButton(onClick = { reloadCatalog++ }, enabled = !catalogLoading) { Text("Обновить") }
+        }
+        if (catalogLoading) LinearProgressIndicator(Modifier.fillMaxWidth())
+        catalogError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+        if (!JsonCatalogAdapter.isEnabled(context)) {
+            Text("JSON-адаптер выключен. Включи его в настройках.", color = Color.LightGray)
+        }
         playerMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         if (playable.isEmpty()) Text("Источников пока нет", color = Color.LightGray)
         LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -175,7 +203,7 @@ fun SourcesScreen(onPlay: (StreamItem) -> Unit, onBack: () -> Unit, movie: Libra
                         Button(onClick = {
                             playerMessage = try {
                                 openInExternalPlayer(context, stream.url)
-                                if (movie != null && stream.id.startsWith("linked-")) onPlayed(movie)
+                                if (movie != null && (stream.id.startsWith("linked-") || stream.id.startsWith("catalog-"))) onPlayed(movie)
                                 null
                             } catch (_: ActivityNotFoundException) {
                                 "На устройстве не найден совместимый видеоплеер. Установи VLC или другой плеер."
