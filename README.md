@@ -137,3 +137,24 @@ The app supports **one configured JSON catalog** with up to 200 items per load a
 **Limitations:** The app currently downloads the catalog each time the source screen is opened; it does not cache it offline. JSON errors are shown in the source screen or by testing from Settings. A public source URL must be treated as untrusted: configure only catalogs you control or trust. The project remains a personal prototype; it does not yet offer a sandbox for arbitrary executable third-party plugins.
 
 **Signing:** v0.7 still depends on the persistent APK signing secrets described in v0.5. An unsigned or differently signed update will not install over an existing app.
+
+## v0.8 website providers and AniLiberty search
+
+The **Настройки → AnimeGO / AniLibria / HdRezkaApi / 4PDA** screen is a directory of external resources. Each entry can be shown/hidden and opened in the device browser.
+
+- **AnimeGO**: opens `https://animego.me/`. No verified official API integration yet; no automated video extraction.
+- **AniLiberty (formerly AniLibria)**: supports in-app title search via public `GET https://aniliberty.top/api/v1/app/search/releases?query=...` and opens matching releases on the provider's website. The old `anilibria.tv` domain now identifies itself as an archive. No in-app AniLiberty video stream integration yet.
+- **HdRezkaApi**: links to `SuperZombi/HdRezkaApi` documentation. This project is a **Python** library and cannot be imported directly into Android/Kotlin. A separate backend or port would need verification, licensing and permission to access media.
+- **4PDA topics 902011 and 1111927**: reference links only. Their content could not be inspected (HTTP 403). They are disabled by default.
+
+Website navigation and an API title search are distinct from real video playback. The current playback screen still accepts explicitly authorized HTTPS video streams from your own library or JSON adapters. v0.8 does not bypass accounts, paywalls, DRM or regional/network restrictions.
+
+The public AniLiberty API search implementation is preliminary and depends on the provider's current response schema and availability. If it returns a networking error, the app will display the error rather than silently substituting a scraped source.
+
+### Version sequencing
+
+Version is `0.8.0` with `versionCode=9`. This change is stacked on the 0.7 feature branch. Merge stacked PRs in sequence if you want the new files in `main`. The persistent signing secret setup is still required for seamless APK updates.
+
+### AniLibria documentation version notice
+
+The user's reference repository [anilibria/docs](https://github.com/anilibria/docs) explicitly marks its historical `api.md`, `api_v2.md` and `api_v3.md` APIs as **DEPRECATED / retired**. Its README redirects developers to the current [AniLiberty API v1 documentation](https://anilibria.top/api/docs/v1). We intentionally use the modern public `GET /api/v1/app/search/releases?query=...` endpoint (AniLiberty host) for title search. The v1 API returns a JSON array of release objects. This implementation currently displays results and opens the provider site; it does not retrieve or play episodes. Verify public endpoint access and provider terms before expanding playback functionality.
