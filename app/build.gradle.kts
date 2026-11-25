@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace = "com.cinemahub.app"
-    compileSdk = 35
+    compileSdk = 36
     defaultConfig {
         applicationId = "com.cinemahub.app"
         minSdk = 26
