@@ -5,6 +5,8 @@ import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.layout.*
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
@@ -82,6 +84,21 @@ fun SourcesScreen(onPlay: (StreamItem) -> Unit, onBack: () -> Unit, movie: Libra
     var customUrl by remember { mutableStateOf(prefs.getString("custom_url", "").orEmpty()) }
     var savedUrl by remember { mutableStateOf(customUrl) }
     var playerMessage by remember { mutableStateOf<String?>(null) }
+    var openedVlcStreamId by remember { mutableStateOf<String?>(null) }
+    var watchedVersion by remember { mutableIntStateOf(0) }
+    var editingTimeFor by remember { mutableStateOf<String?>(null) }
+    var manualTime by remember { mutableStateOf("") }
+    val vlcLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        val streamId = openedVlcStreamId
+        val position = result.data?.getLongExtra("extra_position", -1L) ?: -1L
+        if (streamId != null && position >= 0L) {
+            WatchProgress.save(context, streamId, position)
+            watchedVersion++
+            playerMessage = null
+        } else if (streamId != null) {
+            playerMessage = "VLC не вернул позицию просмотра. Укажи таймкод вручную."
+        }
+    }
     var catalogItems by remember { mutableStateOf<List<CatalogEntry>>(emptyList()) }
     var catalogError by remember { mutableStateOf<String?>(null) }
     var catalogLoading by remember { mutableStateOf(false) }
@@ -200,9 +217,46 @@ fun SourcesScreen(onPlay: (StreamItem) -> Unit, onBack: () -> Unit, movie: Libra
                         Text(stream.source, style = MaterialTheme.typography.bodySmall)
                         if (stream.attribution.isNotBlank()) Text(stream.attribution, style = MaterialTheme.typography.bodySmall)
                         Spacer(Modifier.height(8.dp))
+                        val savedMs = remember(stream.id, watchedVersion) { WatchProgress.read(context, stream.id) }
+                        if (savedMs > 0L) {
+                            Text("Продолжить: " + WatchProgress.format(savedMs), style = MaterialTheme.typography.bodySmall)
+                        }
+                        if (editingTimeFor == stream.id) {
+                            OutlinedTextField(
+                                value = manualTime,
+                                onValueChange = { manualTime = it },
+                                label = { Text("Таймкод ЧЧ:ММ:СС") },
+                                singleLine = true
+                            )
+                            TextButton(onClick = {
+                                val ms = WatchProgress.parse(manualTime)
+                                if (ms == null) playerMessage = "Таймкод некорректен, например 00:12:35"
+                                else {
+                                    WatchProgress.save(context, stream.id, ms)
+                                    watchedVersion++
+                                    editingTimeFor = null
+                                    playerMessage = null
+                                }
+                            }) { Text("Сохранить таймкод") }
+                        } else {
+                            TextButton(onClick = {
+                                editingTimeFor = stream.id
+                                manualTime = WatchProgress.format(savedMs)
+                            }) { Text("✎ Указать таймкод") }
+                        }
                         Button(onClick = {
                             playerMessage = try {
-                                if (!PlaybackPreferences.launch(context, stream.url)) onPlay(stream)
+                                if (PlaybackPreferences.selected(context) == "org.videolan.vlc") {
+                                    val resumeMs = WatchProgress.read(context, stream.id)
+                                    openedVlcStreamId = stream.id
+                                    val intent = PlaybackPreferences.playerIntent(stream.url).apply {
+                                        setPackage("org.videolan.vlc")
+                                        putExtra("title", stream.title)
+                                        putExtra("position", resumeMs)
+                                        putExtra("from_start", resumeMs == 0L)
+                                    }
+                                    vlcLauncher.launch(intent)
+                                } else if (!PlaybackPreferences.launch(context, stream.url)) onPlay(stream)
                                 if (movie != null && (stream.id.startsWith("linked-") || stream.id.startsWith("catalog-"))) onPlayed(movie)
                                 null
                             } catch (_: ActivityNotFoundException) {
