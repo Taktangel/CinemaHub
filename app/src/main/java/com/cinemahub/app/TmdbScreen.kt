@@ -85,7 +85,7 @@ private fun fetchTmdb(apiKey: String, query: String, searchMode: Boolean): List<
 }
 
 @Composable
-fun TmdbScreen(searchMode: Boolean) {
+fun TmdbScreen(searchMode: Boolean, onOpenSources: () -> Unit) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val prefs = remember(context) { context.getSharedPreferences("tmdb_settings", Context.MODE_PRIVATE) }
     var savedKey by remember { mutableStateOf(prefs.getString("api_key_v3", "") ?: "") }
@@ -152,6 +152,9 @@ fun TmdbScreen(searchMode: Boolean) {
                 Text("${film.date.take(4)} · ${if (film.kind == "tv") "Сериал" else "Фильм"} · TMDB ${"%.1f".format(film.rating)}", color = Color.LightGray)
                 Spacer(Modifier.height(12.dp))
                 Text(film.overview.ifBlank { "Описание пока недоступно" }, color = Color.White)
+                Spacer(Modifier.height(10.dp))
+                Button(onClick = onOpenSources) { Text("Источники и плеер (демо)") }
+                Text("Источники в этой версии не связаны с выбранным фильмом.", color = Color.LightGray)
             } else {
                 if (searchMode) {
                     OutlinedTextField(
