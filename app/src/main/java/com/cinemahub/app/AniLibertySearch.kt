@@ -17,6 +17,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.runInterruptible
+import java.net.SocketTimeoutException
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONArray
@@ -29,13 +32,14 @@ data class AniLibertyRelease(val id: Int, val title: String, val alias: String?,
 internal object AniLibertyApi {
     private val client = OkHttpClient.Builder()
         .connectTimeout(8, TimeUnit.SECONDS)
-        .readTimeout(12, TimeUnit.SECONDS)
+        .readTimeout(9, TimeUnit.SECONDS)
+        .callTimeout(13, TimeUnit.SECONDS)
         .build()
 
     suspend fun latest(): List<AniLibertyRelease> = withContext(Dispatchers.IO) {
         val url = "https://aniliberty.top/api/v1/anime/releases/latest?limit=15"
         val request = Request.Builder().url(url).header("Cache-Control", "no-cache").get().build()
-        client.newCall(request).execute().use { response ->
+        runInterruptible(Dispatchers.IO) { client.newCall(request).execute() }.use { response ->
             if (!response.isSuccessful) throw IOException("AniLiberty: HTTP ${response.code}")
             val json = response.body?.string() ?: throw IOException("Пустой ответ")
             val array = JSONArray(json)
@@ -65,7 +69,7 @@ internal object AniLibertyApi {
         val url = "https://aniliberty.top/api/v1/app/search/releases?query=" +
             URLEncoder.encode(q, "UTF-8")
         val request = Request.Builder().url(url).get().build()
-        client.newCall(request).execute().use { response ->
+        runInterruptible(Dispatchers.IO) { client.newCall(request).execute() }.use { response ->
             if (!response.isSuccessful) throw IOException("AniLiberty API: HTTP ${response.code}")
             val responseBody = response.body?.string() ?: throw IOException("Пустой ответ AniLiberty")
             if (responseBody.length > 1_000_000) throw IOException("Слишком большой ответ API")
@@ -123,7 +127,9 @@ fun AniLibertySearchScreen(onBack: () -> Unit, onPlayBuiltIn: (StreamItem) -> Un
             try {
                 episodes = AniLibertyEpisodesApi.releaseEpisodes(initialRelease.id)
                 selected = initialRelease
-            } catch (e: Exception) {
+            } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
                 error = e.message ?: "Не удалось открыть релиз"
             } finally { loading = false }
         }
@@ -132,11 +138,13 @@ fun AniLibertySearchScreen(onBack: () -> Unit, onPlayBuiltIn: (StreamItem) -> Un
     LaunchedEffect(query) {
         matches = emptyList()
         error = null
-        if (query.trim().length < 2) return@LaunchedEffect
+        if (query.trim().length < 2) { loading = false; return@LaunchedEffect }
         delay(450)
         loading = true
         try {
             matches = AniLibertyApi.search(query)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             error = e.message ?: "Ошибка поиска AniLiberty"
         } finally {
@@ -194,7 +202,9 @@ fun AniLibertySearchScreen(onBack: () -> Unit, onPlayBuiltIn: (StreamItem) -> Un
                                         episodes = AniLibertyEpisodesApi.releaseEpisodes(release.id)
                                         selected = release
                                         onReleaseSelected(release)
-                                    } catch (e: Exception) {
+                                    } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
                                         error = e.message ?: "Не удалось получить серии"
                                     } finally { loading = false }
                                 }
@@ -284,7 +294,9 @@ fun AniLibertySearchScreen(onBack: () -> Unit, onPlayBuiltIn: (StreamItem) -> Un
                                         } else if (!PlaybackPreferences.launch(context, item.url)) {
                                             onPlayBuiltIn(item)
                                         }
-                                    } catch (e: Exception) {
+                                    } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
                                         error = e.message ?: "Не удалось запустить плеер"
                                     } finally { playLoading = null }
                                 }
