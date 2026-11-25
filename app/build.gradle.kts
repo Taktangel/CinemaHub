@@ -17,7 +17,7 @@ android {
         // Optional personal-build key. Never commit an API key to the repository.
         val tmdbKey = providers.environmentVariable("TMDB_API_KEY").orNull.orEmpty()
         val sanitizedKey = tmdbKey.replace("\\", "\\\\").replace("\"", "\\\"")
-        buildConfigField("String", "TMDB_API_KEY", "\\"" + sanitizedKey + "\\"")
+        buildConfigField("String", "TMDB_API_KEY", "\"" + sanitizedKey + "\"")
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
