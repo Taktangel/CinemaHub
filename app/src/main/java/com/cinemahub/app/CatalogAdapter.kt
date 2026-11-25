@@ -114,7 +114,7 @@ object JsonCatalogAdapter : CatalogAdapter {
 }
 
 @Composable
-fun CatalogAdapterSettingsScreen() {
+fun CatalogAdapterSettingsScreen(onOpenProviders: () -> Unit = {}) {
     val context = LocalContext.current
     var url by remember { mutableStateOf(JsonCatalogAdapter.catalogUrl(context)) }
     var enabled by remember { mutableStateOf(JsonCatalogAdapter.isEnabled(context)) }
@@ -126,6 +126,7 @@ fun CatalogAdapterSettingsScreen() {
     Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text("Подключаемые источники", color = Color.White, style = MaterialTheme.typography.headlineSmall)
         Text("JSON-каталог связывает TMDB ID с разрешёнными HTTPS-потоками. Содержимое не загружается в GitHub.", color = Color.LightGray)
+        OutlinedButton(onClick = onOpenProviders) { Text("AnimeGO / AniLibria / HdRezkaApi / 4PDA") }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Text("JSON-адаптер", color = Color.White)
             Switch(checked = enabled, onCheckedChange = { enabled = it })
