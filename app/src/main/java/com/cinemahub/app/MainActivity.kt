@@ -94,7 +94,7 @@ private fun CinemaApp() {
                 2 -> PersonalLibraryScreen(onOpenSources = { activeMovie = it; selectedTab = 4 })
                 3 -> CatalogAdapterSettingsScreen(onOpenProviders = { selectedTab = 5 })
                 5 -> ProviderDirectoryScreen(onBack = { selectedTab = 3 }, onOpenAniLiberty = { activeAnime = null; animeReturnTab = 5; selectedTab = 6 })
-                6 -> AniLibertySearchScreen(onBack = { activeAnime = null; selectedTab = animeReturnTab }, onPlayBuiltIn = { playing = it }, initialRelease = activeAnime)
+                6 -> AniLibertySearchScreen(onBack = { activeAnime = null; selectedTab = animeReturnTab }, onPlayBuiltIn = { playing = it }, initialRelease = activeAnime, onReleaseSelected = { activeAnime = it })
                 4 -> SourcesScreen(onPlay = { playing = it }, onBack = { selectedTab = if (activeMovie != null) 2 else 0; activeMovie = null }, movie = activeMovie, onPlayed = { MediaLibrary.recordPlayed(context, it) })
                 else -> Column(Modifier.fillMaxSize()) {
                     AniLatestReleasesSection(
