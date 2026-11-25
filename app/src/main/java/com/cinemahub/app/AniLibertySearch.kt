@@ -20,7 +20,7 @@ import java.io.IOException
 import java.net.URLEncoder
 import java.util.concurrent.TimeUnit
 
-data class AniLibertyRelease(val id: Int, val title: String)
+data class AniLibertyRelease(val id: Int, val title: String, val alias: String?)
 
 private object AniLibertyApi {
     private val client = OkHttpClient.Builder()
@@ -48,7 +48,7 @@ private object AniLibertyApi {
                     val title = name?.optString("main").orEmpty().ifBlank {
                         obj.optString("name", "Релиз #$id")
                     }
-                    add(AniLibertyRelease(id, title.take(160)))
+                    add(AniLibertyRelease(id, title.take(160), obj.optString("alias").takeIf { it.matches(Regex("[a-zA-Z0-9_-]+")) }))
                 }
             }
         }
