@@ -2,7 +2,7 @@ name: Android debug APK
 
 on:
   push:
-    branches: [main, feature/media-sources-player-v0.3, feature/tmdb-network-v0.4]
+    branches: [main, feature/media-sources-player-v0.3, feature/tmdb-network-v0.4, fix/demo-playback-v0.4.1]
   pull_request:
 
 permissions:

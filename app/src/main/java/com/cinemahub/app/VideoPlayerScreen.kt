@@ -17,6 +17,7 @@ import androidx.media3.common.MimeTypes
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.datasource.HttpDataSource
 import androidx.media3.ui.PlayerView
 import androidx.media3.common.util.UnstableApi
 
@@ -40,7 +41,14 @@ fun VideoPlayerScreen(stream: StreamItem, onClose: () -> Unit) {
             if (position > 0) seekTo(position)
             addListener(object : Player.Listener {
                 override fun onPlayerError(playbackError: PlaybackException) {
-                    error = "Ошибка воспроизведения: ${playbackError.errorCodeName}"
+                    val httpError = generateSequence(playbackError as Throwable?) { it.cause }
+                        .filterIsInstance<HttpDataSource.InvalidResponseCodeException>()
+                        .firstOrNull()
+                    error = if (httpError != null) {
+                        "Сервер видео ответил HTTP ${httpError.responseCode}. Попробуй другой источник."
+                    } else {
+                        "Ошибка воспроизведения: ${playbackError.errorCodeName}"
+                    }
                 }
             })
             prepare()

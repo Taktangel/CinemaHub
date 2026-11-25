@@ -29,14 +29,21 @@ interface StreamSource {
 
 private object DemoSource : StreamSource {
     override val id = "demo"
-    override val label = "Демонстрационное видео"
+    override val label = "Тестовые MP4-видео"
     override fun streams(context: Context) = listOf(
         StreamItem(
-            id = "big-buck-bunny",
-            title = "Big Buck Bunny (MP4)",
-            url = "https://storage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+            id = "samplelib-5s",
+            title = "SampleLib — 5 секунд (MP4)",
+            url = "https://samplelib.com/lib/preview/mp4/sample-5s.mp4",
             source = label,
-            attribution = "Big Buck Bunny © Blender Foundation · CC BY 3.0 · демонстрационный ролик"
+            attribution = "Тестовый ролик SampleLib, не связан с каталогом TMDB"
+        ),
+        StreamItem(
+            id = "testfiles-3s",
+            title = "TestFiles.dev — 3 секунды (MP4)",
+            url = "https://assets.testfiles.dev/video/sample-3s.mp4",
+            source = label,
+            attribution = "Альтернативный тестовый MP4, не связан с TMDB"
         )
     )
 }
