@@ -12,8 +12,8 @@ android {
         applicationId = "com.cinemahub.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 10
-        versionName = "0.9.0"
+        versionCode = 11
+        versionName = "0.10.0"
         // Optional personal-build key. Never commit an API key to the repository.
         val tmdbKey = providers.environmentVariable("TMDB_API_KEY").orNull.orEmpty()
         val sanitizedKey = tmdbKey.replace("\\", "\\\\").replace("\"", "\\\"")
@@ -55,6 +55,7 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
     implementation("androidx.navigation:navigation-compose:2.8.9")
     implementation("io.coil-kt:coil-compose:2.7.0")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
