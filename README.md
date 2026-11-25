@@ -63,3 +63,36 @@ Project repository: https://github.com/Taktangel/CinemaHub
 - TMDB v3 key entered in the app is retained across ordinary updates with the same application ID and signing certificate. Do **not** uninstall or clear app data if you want to retain it.
 - To preconfigure a key in your *personal build*, set a repository **Actions secret** named `TMDB_API_KEY` at GitHub Settings → Secrets and variables → Actions. The workflow uses it for the build. Do not paste it into source code, commits, PRs or logs.
 - **Important:** any key embedded in an APK can be extracted by recipients. This secret-based method keeps the key out of Git history but **does not make it secret inside the APK**. Avoid distributing personalized APKs; use a backend API for production. CI build artifacts may be accessible to others in a public repository.
+
+## v0.5 external video player
+
+In **Источники / Плеер**, each source now has **Внешний плеер** as the primary action. Android opens its standard app chooser (VLC or another installed app that accepts streaming links). The built-in Media3 player remains as a fallback. Using a different player does not fix a denied/slow HTTP source; try your own accessible stream if both demos fail.
+
+### Stable APK signing for updates (configure once)
+
+Android requires the same signing certificate for all updates. GitHub-hosted debug builds without a persistent keystore may be signed differently each time, which causes an "app not installed" or update conflict. **Never commit a keystore or passwords to your public repo.**
+
+Generate a permanent keystore **locally on your Windows computer** using the JDK keytool (choose strong passwords and keep the JKS in a private backup outside the repo):
+
+```powershell
+keytool -genkeypair -v -keystore "$env:USERPROFILE\\CinemaHub-release.jks" -alias cinemahub -keyalg RSA -keysize 3072 -validity 10000
+```
+
+Convert the file to Base64 text locally:
+
+```powershell
+[Convert]::ToBase64String([IO.File]::ReadAllBytes("$env:USERPROFILE\\CinemaHub-release.jks")) | Set-Clipboard
+```
+
+At repository **Settings → Secrets and variables → Actions**, create these repository secrets:
+
+- `CINEMAHUB_KEYSTORE_BASE64` = clipboard Base64 text from your private JKS.
+- `CINEMAHUB_STORE_PASSWORD` = the keystore password.
+- `CINEMAHUB_KEY_ALIAS` = `cinemahub`.
+- `CINEMAHUB_KEY_PASSWORD` = key password (may equal store password, depending on keystore).
+
+On subsequent builds, GitHub Actions decodes the JKS into runner temporary storage and uses it to sign the debug APK. Keep passwords and keystore backed up; loss of the signing key means no seamless updates. Do not share these secrets in issues or chats.
+
+**Migration:** Existing 0.4.x builds used unrelated debug signing keys. You may need to uninstall once to migrate to the persistent key, which clears the current API key unless separately backed up. All updates signed with the new key can then install over the previous app, provided the application ID remains the same and `versionCode` increases.
+
+**Do not distribute the persistent JKS.** For a public launch, consider production release signing, restricted CI environments, and protect the signing workflow from untrusted pull request code.

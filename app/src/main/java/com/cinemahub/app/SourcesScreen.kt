@@ -1,6 +1,8 @@
 package com.cinemahub.app
 
 import android.content.Context
+import android.content.ActivityNotFoundException
+import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -8,6 +10,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 
@@ -78,6 +81,7 @@ fun SourcesScreen(onPlay: (StreamItem) -> Unit, onBack: () -> Unit) {
     var userEnabled by remember { mutableStateOf(prefs.getBoolean("user_enabled", true)) }
     var customUrl by remember { mutableStateOf(prefs.getString("custom_url", "").orEmpty()) }
     var savedUrl by remember { mutableStateOf(customUrl) }
+    var playerMessage by remember { mutableStateOf<String?>(null) }
     val playable = registeredSources
         .filter { source -> when (source.id) {
             "demo" -> demoEnabled
@@ -134,19 +138,52 @@ fun SourcesScreen(onPlay: (StreamItem) -> Unit, onBack: () -> Unit) {
         }
         Spacer(Modifier.height(12.dp))
         Text("Доступные источники", color = Color.White, style = MaterialTheme.typography.titleMedium)
+        playerMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         if (playable.isEmpty()) Text("Источников пока нет", color = Color.LightGray)
         LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             items(playable, key = { it.id }) { stream ->
-                ElevatedCard(onClick = { onPlay(stream) }, modifier = Modifier.fillMaxWidth()) {
+                ElevatedCard(modifier = Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(14.dp)) {
                         Text(stream.title, style = MaterialTheme.typography.titleMedium)
                         Text(stream.source, style = MaterialTheme.typography.bodySmall)
                         if (stream.attribution.isNotBlank()) Text(stream.attribution, style = MaterialTheme.typography.bodySmall)
-                        Spacer(Modifier.height(4.dp))
-                        Text("▶ Смотреть", color = MaterialTheme.colorScheme.primary)
+                        Spacer(Modifier.height(8.dp))
+                        Button(onClick = {
+                            playerMessage = try {
+                                openInExternalPlayer(context, stream.url)
+                                null
+                            } catch (_: ActivityNotFoundException) {
+                                "На устройстве не найден совместимый видеоплеер. Установи VLC или другой плеер."
+                            } catch (e: Exception) {
+                                "Не удалось открыть внешнее приложение: ${e.message}"
+                            }
+                        }) { Text("▶ Внешний плеер") }
+                        TextButton(onClick = { onPlay(stream) }) {
+                            Text("Встроенный плеер (резервный)")
+                        }
                     }
                 }
             }
         }
     }
+}
+
+/**
+ * Send the video URL to an installed Android media application.
+ * Nothing is downloaded or extracted. Players are responsible for streaming.
+ */
+private fun openInExternalPlayer(context: Context, url: String) {
+    val path = Uri.parse(url).path.orEmpty().lowercase()
+    val type = when {
+        path.endsWith(".m3u8") -> "application/vnd.apple.mpegurl"
+        path.endsWith(".mpd") -> "application/dash+xml"
+        else -> "video/*"
+    }
+    val view = Intent(Intent.ACTION_VIEW).apply {
+        setDataAndType(Uri.parse(url), type)
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+    context.startActivity(Intent.createChooser(view, "Выбери видеоплеер").apply {
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    })
 }
