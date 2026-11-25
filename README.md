@@ -106,3 +106,34 @@ On subsequent builds, GitHub Actions decodes the JKS into runner temporary stora
 - Favorites, per-title links and recent selections are stored on the device. They survive ordinary signed updates but **not** uninstall, data-clear or moving to a new device.
 - This does not discover or extract video URLs from third-party unlicensed streaming sites; TMDB is only a metadata source.
 - v0.6 does not yet support TV-specific per-season/episode link mapping, cloud synchronization, or cross-device watch history.
+
+## v0.7 JSON source adapter (prototype)
+
+The **Настройки** (gear) screen now includes a configurable source adapter for a **user-controlled HTTPS JSON catalog**. The catalog is read at runtime, so adding or changing a catalog doesn't require rebuilding the app.
+
+1. Publish a UTF-8 `catalog.json` file at a publicly accessible HTTPS address. You can use GitHub Pages, a server you administer, or another allowed HTTPS hosting service. Do not add usernames, passwords, or API tokens to the URL.
+2. Use a document with the following structure:
+
+```json
+{
+  "name": "Моя медиатека",
+  "items": [
+    {
+      "tmdb_id": 550,
+      "media_type": "movie",
+      "title": "Демонстрационный ролик для проверки адаптера — не фильм",
+      "url": "https://assets.testfiles.dev/video/sample-3s.mp4",
+      "attribution": "Short, separately hosted test video; not the selected movie."
+    }
+  ]
+}
+```
+
+3. Open the **Настройки** screen in CinemaHub 0.7, enable **JSON-адаптер**, enter the catalog URL, tap **Сохранить**, and then **Проверить каталог**.
+4. Find the title with TMDB ID 550, open **Мои источники**. The example will be labeled as a test video, **not the actual film**. For other catalog entries use each work's correct TMDB ID, and only use streams you are authorized to provide or play.
+
+The app supports **one configured JSON catalog** with up to 200 items per load and matches streams using `media_type` + `tmdb_id`. The JSON schema is a documented extension point: additional adapters may implement `CatalogAdapter`. No HTML scraping, login bypass, DRM circumvention or automatic extraction of third-party playback URLs is implemented.
+
+**Limitations:** The app currently downloads the catalog each time the source screen is opened; it does not cache it offline. JSON errors are shown in the source screen or by testing from Settings. A public source URL must be treated as untrusted: configure only catalogs you control or trust. The project remains a personal prototype; it does not yet offer a sandbox for arbitrary executable third-party plugins.
+
+**Signing:** v0.7 still depends on the persistent APK signing secrets described in v0.5. An unsigned or differently signed update will not install over an existing app.
