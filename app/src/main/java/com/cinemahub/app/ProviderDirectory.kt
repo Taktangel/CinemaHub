@@ -91,7 +91,7 @@ fun openProviderWebsite(context: Context, url: String): Boolean {
 }
 
 @Composable
-fun ProviderDirectoryScreen(onBack: () -> Unit) {
+fun ProviderDirectoryScreen(onBack: () -> Unit, onOpenAniLiberty: () -> Unit) {
     val context = LocalContext.current
     var changed by remember { mutableIntStateOf(0) }
     var notice by remember { mutableStateOf<String?>(null) }
@@ -128,6 +128,9 @@ fun ProviderDirectoryScreen(onBack: () -> Unit) {
                                 CinemaProviders.setEnabled(context, provider, it)
                                 changed++
                             })
+                        }
+                        if (isEnabled && provider.id == "anilibria") {
+                            Button(onClick = onOpenAniLiberty) { Text("Поиск через AniLiberty API") }
                         }
                         if (isEnabled) {
                             OutlinedButton(onClick = {
