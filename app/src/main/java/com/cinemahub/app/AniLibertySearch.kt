@@ -21,7 +21,7 @@ import java.io.IOException
 import java.net.URLEncoder
 import java.util.concurrent.TimeUnit
 
-data class AniLibertyRelease(val id: Int, val title: String, val alias: String?)
+data class AniLibertyRelease(val id: Int, val title: String, val alias: String?, val poster: String? = null)
 
 internal object AniLibertyApi {
     private val client = OkHttpClient.Builder()
@@ -44,7 +44,13 @@ internal object AniLibertyApi {
                     val title = obj.optJSONObject("name")?.optString("main").orEmpty()
                         .ifBlank { "Аниме #$id" }
                     val alias = obj.optString("alias").takeIf { it.matches(Regex("[a-zA-Z0-9_-]+")) }
-                    add(AniLibertyRelease(id, title, alias))
+                    val preview = obj.optJSONObject("poster")?.optString("preview").orEmpty()
+                    val poster = when {
+                        preview.startsWith("https://") -> preview
+                        preview.startsWith("/storage/") -> "https://aniliberty.top" + preview
+                        else -> null
+                    }
+                    add(AniLibertyRelease(id, title, alias, poster))
                 }
             }
         }
@@ -70,7 +76,9 @@ internal object AniLibertyApi {
                     val title = name?.optString("main").orEmpty().ifBlank {
                         obj.optString("name", "Релиз #$id")
                     }
-                    add(AniLibertyRelease(id, title.take(160), obj.optString("alias").takeIf { it.matches(Regex("[a-zA-Z0-9_-]+")) }))
+                    val preview = obj.optJSONObject("poster")?.optString("preview").orEmpty()
+                    val poster = if (preview.startsWith("/storage/")) "https://aniliberty.top" + preview else preview.takeIf { it.startsWith("https://") }
+                    add(AniLibertyRelease(id, title.take(160), obj.optString("alias").takeIf { it.matches(Regex("[a-zA-Z0-9_-]+")) }, poster))
                 }
             }
         }
