@@ -7,12 +7,17 @@ plugins {
 android {
     namespace = "com.cinemahub.app"
     compileSdk = 36
+    buildFeatures { compose = true; buildConfig = true }
     defaultConfig {
         applicationId = "com.cinemahub.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 3
-        versionName = "0.3.0"
+        versionCode = 4
+        versionName = "0.4.0"
+        // Optional personal-build key. Never commit an API key to the repository.
+        val tmdbKey = providers.environmentVariable("TMDB_API_KEY").orNull.orEmpty()
+        val sanitizedKey = tmdbKey.replace("\\", "\\\\").replace("\"", "\\\"")
+        buildConfigField("String", "TMDB_API_KEY", "\\\"" + sanitizedKey + "\\\"")
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -21,7 +26,6 @@ android {
     kotlinOptions {
         jvmTarget = "17"
     }
-    buildFeatures { compose = true }
 }
 
 dependencies {
@@ -35,6 +39,8 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
     implementation("androidx.navigation:navigation-compose:2.8.9")
     implementation("io.coil-kt:coil-compose:2.7.0")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("com.squareup.okhttp3:okhttp-dnsoverhttps:4.12.0")
     implementation("androidx.media3:media3-exoplayer:1.11.1")
     implementation("androidx.media3:media3-exoplayer-hls:1.11.1")
     implementation("androidx.media3:media3-exoplayer-dash:1.11.1")
