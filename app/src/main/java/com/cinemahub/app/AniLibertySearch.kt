@@ -104,6 +104,7 @@ fun AniLibertySearchScreen(onBack: () -> Unit, onPlayBuiltIn: (StreamItem) -> Un
     var loading by remember { mutableStateOf(false) }
     var playLoading by remember { mutableStateOf<String?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
+    var retrySearch by remember { mutableIntStateOf(0) }
     var lastPlayedEpisode by remember { mutableStateOf<String?>(null) }
     var timeCodeText by remember { mutableStateOf("") }
     var timeCodeEpisode by remember { mutableStateOf<String?>(null) }
@@ -135,7 +136,7 @@ fun AniLibertySearchScreen(onBack: () -> Unit, onPlayBuiltIn: (StreamItem) -> Un
         }
     }
 
-    LaunchedEffect(query) {
+    LaunchedEffect(query, retrySearch) {
         matches = emptyList()
         error = null
         if (query.trim().length < 2) { loading = false; return@LaunchedEffect }
@@ -186,7 +187,12 @@ fun AniLibertySearchScreen(onBack: () -> Unit, onPlayBuiltIn: (StreamItem) -> Un
         }
 
         if (loading) LinearProgressIndicator(Modifier.fillMaxWidth())
-        error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+        error?.let {
+            Text(it, color = MaterialTheme.colorScheme.error)
+            if (selected == null && query.trim().length >= 2) {
+                TextButton(onClick = { retrySearch++ }) { Text("Повторить поиск") }
+            }
+        }
         Spacer(Modifier.height(8.dp))
         if (selected == null) {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
