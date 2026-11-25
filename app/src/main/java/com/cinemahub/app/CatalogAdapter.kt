@@ -119,7 +119,7 @@ object JsonCatalogAdapter : CatalogAdapter {
 }
 
 @Composable
-fun CatalogAdapterSettingsScreen(onOpenProviders: () -> Unit = {}) {
+fun CatalogAdapterSettingsScreen(onOpenProviders: () -> Unit = {}, onBack: () -> Unit = {}) {
     val context = LocalContext.current
     var url by remember { mutableStateOf(JsonCatalogAdapter.catalogUrl(context)) }
     var enabled by remember { mutableStateOf(JsonCatalogAdapter.isEnabled(context)) }
@@ -129,6 +129,7 @@ fun CatalogAdapterSettingsScreen(onOpenProviders: () -> Unit = {}) {
     val valid = url.isBlank() || (url.startsWith("https://") && isSupportedStreamUrl(url))
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        TextButton(onClick = onBack) { Text("← На главную") }
         PlaybackSettingsSection()
         HorizontalDivider()
         Text("Подключаемые источники", color = Color.White, style = MaterialTheme.typography.headlineSmall)
