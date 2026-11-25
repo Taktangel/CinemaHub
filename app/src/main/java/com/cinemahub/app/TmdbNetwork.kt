@@ -38,7 +38,8 @@ object TmdbNetwork {
         host == "api.themoviedb.org" ||
             host == "image.tmdb.org"
 
-    val dns: Dns = Dns { hostname ->
+    val dns: Dns = object : Dns {
+        override fun lookup(hostname: String): List<InetAddress> {
         if (!isTmdb(hostname)) {
             standard.lookup(hostname)
         } else {
