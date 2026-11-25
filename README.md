@@ -2,7 +2,7 @@
 
 CinemaHub is an experimental Android movie and TV show discovery app written in Kotlin with Jetpack Compose.
 
-**Current status: v0.1.0 prototype.** The app displays six built-in demo entries and can search them locally. Favorites, source adapters, video playback, and a TMDB integration are not implemented yet.
+**Current status: v0.2 development preview (not build-verified).** The main tab loads trending movie and TV metadata from TMDB; the search tab searches TMDB; tapping an item displays its description. Demo data remains in the source code. Favorites, source adapters, and playback are not implemented.
 
 ## Getting started
 
@@ -14,9 +14,19 @@ CinemaHub is an experimental Android movie and TV show discovery app written in 
 
 The project does not yet include Gradle Wrapper files. Android Studio can synchronize using a local Gradle installation; adding and committing the complete wrapper is a priority before CI.
 
+## TMDB setup
+
+1. Obtain a **TMDB API Key (v3 auth)** from https://www.themoviedb.org/settings/api.
+2. Run CinemaHub and enter the key on the **Каталог TMDB** screen. Do not paste it into GitHub.
+3. Open **Поиск TMDB** to search titles, including TV series.
+
+**Security note:** v0.2 stores the key in Android's app-private SharedPreferences, not in the GitHub repository. This is appropriate for an experimental local prototype but is **not encrypted storage**. The key is used in API query parameters, which may also be visible in network logs. For distribution, a backend proxy and secure credential architecture are recommended.
+
+Data and image metadata are provided by TMDB. This product uses the TMDB API but is not endorsed or certified by TMDB.
+
 ## Roadmap
 
-- TMDB metadata and poster catalog (respecting the TMDB API terms and attribution requirements)
+- Build verification for TMDB metadata, poster catalog and search; handle errors and caching
 - Modular source interfaces for authorized providers and user-owned libraries
 - Local favorites, history, and resume
 - Android TV focus navigation

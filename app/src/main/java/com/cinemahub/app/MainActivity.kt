@@ -73,10 +73,10 @@ private fun CinemaApp() {
             if (selectedFilm != null) {
                 FilmDetails(film = selectedFilm!!, onBack = { selectedFilm = null })
             } else when (selectedTab) {
-                1 -> SearchPage(query, onQuery = { query = it }, films = filtered, onFilm = { selectedFilm = it })
+                1 -> TmdbScreen(searchMode = true)
                 2 -> EmptyPage("Избранное", "Здесь будут храниться фильмы, которые ты добавишь в избранное.")
                 3 -> EmptyPage("Настройки", "В следующих версиях здесь появятся настройки источников, плеера и интерфейса.")
-                else -> HomePage(films = sampleFilms, onFilm = { selectedFilm = it }, query = query, onQuery = { query = it })
+                else -> TmdbScreen(searchMode = false)
             }
         }
     }
