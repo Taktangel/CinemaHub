@@ -3,6 +3,10 @@ package com.cinemahub.app
 import android.content.Context
 import android.net.Uri
 import androidx.activity.compose.BackHandler
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import kotlinx.coroutines.delay
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -27,7 +31,7 @@ fun VideoPlayerScreen(stream: StreamItem, onClose: () -> Unit) {
     val context = LocalContext.current
     val prefs = remember(context) { context.getSharedPreferences("playback_positions", Context.MODE_PRIVATE) }
     var error by remember { mutableStateOf<String?>(null) }
-    val player = remember(stream.url) {
+    val player = remember(stream.id, stream.url) {
         ExoPlayer.Builder(context).build().apply {
             val uri = Uri.parse(stream.url)
             val path = uri.path.orEmpty().lowercase()
@@ -59,6 +63,20 @@ fun VideoPlayerScreen(stream: StreamItem, onClose: () -> Unit) {
         val position = if (player.playbackState == Player.STATE_ENDED) 0L else player.currentPosition
         prefs.edit().putLong("position_${stream.id}", position.coerceAtLeast(0)).apply()
     }
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner, player) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_STOP || event == Lifecycle.Event.ON_PAUSE) savePosition()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+    LaunchedEffect(player) {
+        while (true) {
+            delay(5000)
+            if (player.isPlaying && player.currentPosition > 0L) savePosition()
+        }
+    }
     DisposableEffect(player) {
         onDispose {
             savePosition()
@@ -72,6 +90,8 @@ fun VideoPlayerScreen(stream: StreamItem, onClose: () -> Unit) {
     Column(Modifier.fillMaxSize().padding(12.dp)) {
         TextButton(onClick = { savePosition(); onClose() }) { Text("← К источникам") }
         Text(stream.title, color = Color.White, style = MaterialTheme.typography.titleMedium)
+        val resumePosition = remember(stream.id) { prefs.getLong("position_${stream.id}", 0L) }
+        if (resumePosition > 0L) Text("Продолжение с ${resumePosition / 60000} мин ${resumePosition / 1000 % 60} сек", color = Color.LightGray)
         Spacer(Modifier.height(8.dp))
         AndroidView(
             factory = { ctx ->

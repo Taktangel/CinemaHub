@@ -168,3 +168,12 @@ The user's reference repository [anilibria/docs](https://github.com/anilibria/do
 - If the selected external player was removed or can't handle the URL, CinemaHub shows Android's player chooser instead of silently failing.
 - AniLiberty is an external service. Playback depends on its server, the user's region/network and availability of CDN HLS streams. The app does not decrypt DRM, obtain private credentials, or bypass access control. Playback availability has not been confirmed on a physical phone.
 - Stable APK signing still requires an owner-controlled keystore in GitHub Actions secrets; new debug builds without one may require a one-time uninstall and will clear local preferences.
+
+
+## v0.10: Latest AniLiberty episodes on home and playback resume
+
+- Home now displays a horizontal row of the 15 latest **AniLiberty releases updated with episodes**, fetched from public `GET /anime/releases/latest?limit=15`. Tapping a card opens its episode list. The TMDB catalog remains underneath.
+- The AniLiberty episode playback button can be used repeatedly. Each tap fetches a fresh episode playlist URL using `GET /anime/releases/episodes/{id}` and, if that endpoint fails, reloads the release's episode listing. Streaming success still depends on the provider and player's network access.
+- Built-in Media3 player saves each video/episode progress separately every five seconds while playing, when backgrounded, when leaving player, and on disposal. It resumes from the saved position when a video/episode is opened again; it resets after playback reaches the end.
+- **External players (VLC, Just Player etc.) manage their own watch positions**. Android's normal ACTION_VIEW handoff does not provide CinemaHub with position callbacks. CinemaHub cannot read or guarantee automatic resume of external playback; enable resume in the selected external player if available. Switching streams or reinstalling CinemaHub resets local preferences but not necessarily the external player's own settings.
+- **Warning:** Existing debug APK signing remains ephemeral unless a persistent signing key is configured in GitHub Actions. This may require an uninstall to update, clearing CinemaHub's saved progress. Set up persistent signing before relying on history.

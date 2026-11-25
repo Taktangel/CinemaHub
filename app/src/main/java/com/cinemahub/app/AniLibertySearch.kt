@@ -21,13 +21,40 @@ import java.io.IOException
 import java.net.URLEncoder
 import java.util.concurrent.TimeUnit
 
-data class AniLibertyRelease(val id: Int, val title: String, val alias: String?)
+data class AniLibertyRelease(val id: Int, val title: String, val alias: String?, val poster: String? = null)
 
 internal object AniLibertyApi {
     private val client = OkHttpClient.Builder()
         .connectTimeout(8, TimeUnit.SECONDS)
         .readTimeout(12, TimeUnit.SECONDS)
         .build()
+
+    suspend fun latest(): List<AniLibertyRelease> = withContext(Dispatchers.IO) {
+        val url = "https://aniliberty.top/api/v1/anime/releases/latest?limit=15"
+        val request = Request.Builder().url(url).header("Cache-Control", "no-cache").get().build()
+        client.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) throw IOException("AniLiberty: HTTP ${response.code}")
+            val json = response.body?.string() ?: throw IOException("Пустой ответ")
+            val array = JSONArray(json)
+            buildList {
+                for (i in 0 until minOf(15, array.length())) {
+                    val obj = array.optJSONObject(i) ?: continue
+                    val id = obj.optInt("id")
+                    if (id < 1) continue
+                    val title = obj.optJSONObject("name")?.optString("main").orEmpty()
+                        .ifBlank { "Аниме #$id" }
+                    val alias = obj.optString("alias").takeIf { it.matches(Regex("[a-zA-Z0-9_-]+")) }
+                    val preview = obj.optJSONObject("poster")?.optString("preview").orEmpty()
+                    val poster = when {
+                        preview.startsWith("https://") -> preview
+                        preview.startsWith("/storage/") -> "https://aniliberty.top" + preview
+                        else -> null
+                    }
+                    add(AniLibertyRelease(id, title, alias, poster))
+                }
+            }
+        }
+    }
 
     suspend fun search(query: String): List<AniLibertyRelease> = withContext(Dispatchers.IO) {
         val q = query.trim()
@@ -49,7 +76,9 @@ internal object AniLibertyApi {
                     val title = name?.optString("main").orEmpty().ifBlank {
                         obj.optString("name", "Релиз #$id")
                     }
-                    add(AniLibertyRelease(id, title.take(160), obj.optString("alias").takeIf { it.matches(Regex("[a-zA-Z0-9_-]+")) }))
+                    val preview = obj.optJSONObject("poster")?.optString("preview").orEmpty()
+                    val poster = if (preview.startsWith("/storage/")) "https://aniliberty.top" + preview else preview.takeIf { it.startsWith("https://") }
+                    add(AniLibertyRelease(id, title.take(160), obj.optString("alias").takeIf { it.matches(Regex("[a-zA-Z0-9_-]+")) }, poster))
                 }
             }
         }
@@ -57,7 +86,7 @@ internal object AniLibertyApi {
 }
 
 @Composable
-fun AniLibertySearchScreen(onBack: () -> Unit, onPlayBuiltIn: (StreamItem) -> Unit) {
+fun AniLibertySearchScreen(onBack: () -> Unit, onPlayBuiltIn: (StreamItem) -> Unit, initialRelease: AniLibertyRelease? = null, onReleaseSelected: (AniLibertyRelease) -> Unit = {}) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var query by remember { mutableStateOf("") }
@@ -68,6 +97,19 @@ fun AniLibertySearchScreen(onBack: () -> Unit, onPlayBuiltIn: (StreamItem) -> Un
     var loading by remember { mutableStateOf(false) }
     var playLoading by remember { mutableStateOf<String?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(initialRelease?.id) {
+        if (initialRelease != null) {
+            loading = true
+            error = null
+            try {
+                episodes = AniLibertyEpisodesApi.releaseEpisodes(initialRelease.id)
+                selected = initialRelease
+            } catch (e: Exception) {
+                error = e.message ?: "Не удалось открыть релиз"
+            } finally { loading = false }
+        }
+    }
 
     LaunchedEffect(query) {
         matches = emptyList()
@@ -133,6 +175,7 @@ fun AniLibertySearchScreen(onBack: () -> Unit, onPlayBuiltIn: (StreamItem) -> Un
                                     try {
                                         episodes = AniLibertyEpisodesApi.releaseEpisodes(release.id)
                                         selected = release
+                                        onReleaseSelected(release)
                                     } catch (e: Exception) {
                                         error = e.message ?: "Не удалось получить серии"
                                     } finally { loading = false }
@@ -155,13 +198,27 @@ fun AniLibertySearchScreen(onBack: () -> Unit, onPlayBuiltIn: (StreamItem) -> Un
                                     (if (episode.title.isNotBlank()) " · " + episode.title else ""),
                                 style = MaterialTheme.typography.titleMedium
                             )
+                            val saved = remember(episode.id) {
+                                context.getSharedPreferences("playback_positions", Context.MODE_PRIVATE)
+                                    .getLong("position_aniliberty-${episode.id}", 0L)
+                            }
+                            if (saved > 0L) Text(
+                                "Последняя позиция: ${saved / 60000} мин ${saved / 1000 % 60} сек (встроенный плеер)",
+                                color = Color.LightGray, style = MaterialTheme.typography.bodySmall
+                            )
                             Button(enabled = playLoading == null, onClick = {
                                 scope.launch {
                                     playLoading = episode.id
                                     error = null
                                     try {
                                         // Refresh HLS URLs just before playback. Query parameters may change.
-                                        val fresh = AniLibertyEpisodesApi.currentEpisode(episode.id)
+                                        val fresh = try {
+                                            AniLibertyEpisodesApi.currentEpisode(episode.id)
+                                        } catch (_: IOException) {
+                                            AniLibertyEpisodesApi.releaseEpisodes(selected!!.id)
+                                                .firstOrNull { it.id == episode.id }
+                                                ?: throw IOException("Серия больше не доступна")
+                                        }
                                         val stream = fresh.stream(quality)
                                             ?: throw IOException("Для выбранного качества нет HLS-ссылки")
                                         val item = StreamItem(
