@@ -86,7 +86,7 @@ internal object AniLibertyApi {
 }
 
 @Composable
-fun AniLibertySearchScreen(onBack: () -> Unit, onPlayBuiltIn: (StreamItem) -> Unit, initialRelease: AniLibertyRelease? = null) {
+fun AniLibertySearchScreen(onBack: () -> Unit, onPlayBuiltIn: (StreamItem) -> Unit, initialRelease: AniLibertyRelease? = null, onReleaseSelected: (AniLibertyRelease) -> Unit = {}) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     var query by remember { mutableStateOf("") }
@@ -175,6 +175,7 @@ fun AniLibertySearchScreen(onBack: () -> Unit, onPlayBuiltIn: (StreamItem) -> Un
                                     try {
                                         episodes = AniLibertyEpisodesApi.releaseEpisodes(release.id)
                                         selected = release
+                                        onReleaseSelected(release)
                                     } catch (e: Exception) {
                                         error = e.message ?: "Не удалось получить серии"
                                     } finally { loading = false }
