@@ -14,6 +14,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -49,6 +50,7 @@ private fun CinemaApp() {
     var selectedTab by remember { mutableStateOf(0) }
     var selectedFilm by remember { mutableStateOf<Film?>(null) }
     val filtered = sampleFilms.filter { it.title.contains(query, ignoreCase = true) }
+    var playing by remember { mutableStateOf<StreamItem?>(null) }
 
     Surface(color = Color(0xFF0D1016), modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -70,13 +72,25 @@ private fun CinemaApp() {
                     Icon(Icons.Default.Settings, contentDescription = "Настройки", tint = if (selectedTab == 3) Color(0xFF9B8CFF) else Color.LightGray, modifier = Modifier.clickable { selectedTab = 3 })
                 }
             }
-            if (selectedFilm != null) {
+            if (playing == null) {
+            Row(Modifier.fillMaxWidth().padding(horizontal = 22.dp)) {
+                TextButton(onClick = { selectedTab = 4; selectedFilm = null }) {
+                    Icon(Icons.Default.PlayArrow, contentDescription = null)
+                    Spacer(Modifier.width(4.dp))
+                    Text("Источники / Плеер")
+                }
+            }
+            }
+            if (playing != null) {
+                VideoPlayerScreen(stream = playing!!, onClose = { playing = null })
+            } else if (selectedFilm != null) {
                 FilmDetails(film = selectedFilm!!, onBack = { selectedFilm = null })
             } else when (selectedTab) {
-                1 -> TmdbScreen(searchMode = true)
+                1 -> TmdbScreen(searchMode = true, onOpenSources = { selectedTab = 4 })
                 2 -> EmptyPage("Избранное", "Здесь будут храниться фильмы, которые ты добавишь в избранное.")
                 3 -> EmptyPage("Настройки", "В следующих версиях здесь появятся настройки источников, плеера и интерфейса.")
-                else -> TmdbScreen(searchMode = false)
+                4 -> SourcesScreen(onPlay = { playing = it }, onBack = { selectedTab = 0 })
+                else -> TmdbScreen(searchMode = false, onOpenSources = { selectedTab = 4 })
             }
         }
     }
