@@ -40,25 +40,22 @@ object TmdbNetwork {
 
     val dns: Dns = object : Dns {
         override fun lookup(hostname: String): List<InetAddress> {
-        if (!isTmdb(hostname)) {
-            standard.lookup(hostname)
-        } else {
+            if (!isTmdb(hostname)) return standard.lookup(hostname)
+
             val systemResult = try {
                 standard.lookup(hostname).filterNot { it.isLoopbackAddress || it.isAnyLocalAddress }
             } catch (_: IOException) {
                 emptyList()
             }
-            if (systemResult.isNotEmpty()) {
-                systemResult
-            } else {
-                val secureResult = quad9.lookup(hostname).filterNot {
-                    it.isLoopbackAddress || it.isAnyLocalAddress
-                }
-                if (secureResult.isEmpty()) {
-                    throw java.net.UnknownHostException("TMDB DNS: no public addresses from Quad9")
-                }
-                secureResult
+            if (systemResult.isNotEmpty()) return systemResult
+
+            val secureResult = quad9.lookup(hostname).filterNot {
+                it.isLoopbackAddress || it.isAnyLocalAddress
             }
+            if (secureResult.isEmpty()) {
+                throw java.net.UnknownHostException("TMDB DNS: no public addresses from Quad9")
+            }
+            return secureResult
         }
     }
 
