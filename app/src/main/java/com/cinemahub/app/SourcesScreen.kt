@@ -74,7 +74,7 @@ fun isSupportedStreamUrl(input: String): Boolean {
 }
 
 @Composable
-fun SourcesScreen(onPlay: (StreamItem) -> Unit, onBack: () -> Unit) {
+fun SourcesScreen(onPlay: (StreamItem) -> Unit, onBack: () -> Unit, movie: LibraryMovie? = null, onPlayed: (LibraryMovie) -> Unit = {}) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val prefs = remember(context) { context.getSharedPreferences("cinema_sources", Context.MODE_PRIVATE) }
     var demoEnabled by remember { mutableStateOf(prefs.getBoolean("demo_enabled", true)) }
@@ -82,7 +82,12 @@ fun SourcesScreen(onPlay: (StreamItem) -> Unit, onBack: () -> Unit) {
     var customUrl by remember { mutableStateOf(prefs.getString("custom_url", "").orEmpty()) }
     var savedUrl by remember { mutableStateOf(customUrl) }
     var playerMessage by remember { mutableStateOf<String?>(null) }
-    val playable = registeredSources
+    var movieUrl by remember(movie?.mediaKey) { mutableStateOf(movie?.let { MediaLibrary.videoUrl(context, it.mediaKey) }.orEmpty()) }
+    var savedMovieUrl by remember(movie?.mediaKey) { mutableStateOf(movieUrl) }
+    val ownFilmStream = if (movie != null && isSupportedStreamUrl(savedMovieUrl)) {
+        listOf(StreamItem("linked-${movie.mediaKey}", movie.title, savedMovieUrl, "Мой источник для фильма"))
+    } else emptyList()
+    val playable = ownFilmStream + registeredSources
         .filter { source -> when (source.id) {
             "demo" -> demoEnabled
             "user" -> userEnabled
@@ -92,7 +97,7 @@ fun SourcesScreen(onPlay: (StreamItem) -> Unit, onBack: () -> Unit) {
 
     Column(Modifier.fillMaxSize().padding(16.dp)) {
         TextButton(onClick = onBack) { Text("← Назад") }
-        Text("Источники и плеер", color = Color.White, style = MaterialTheme.typography.headlineSmall)
+        Text(movie?.let { "Источники: ${it.title}" } ?: "Источники и плеер", color = Color.White, style = MaterialTheme.typography.headlineSmall)
         Spacer(Modifier.height(8.dp))
         Text(
             "Это тестовые видеопотоки, не привязанные к фильмам TMDB. " +
@@ -100,6 +105,25 @@ fun SourcesScreen(onPlay: (StreamItem) -> Unit, onBack: () -> Unit) {
             color = Color.LightGray
         )
         Spacer(Modifier.height(12.dp))
+        if (movie != null) {
+            OutlinedTextField(
+                value = movieUrl,
+                onValueChange = { movieUrl = it },
+                label = { Text("Моя HTTPS-ссылка для фильма") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Button(
+                enabled = movieUrl.isBlank() || isSupportedStreamUrl(movieUrl.trim()),
+                onClick = {
+                    val url = movieUrl.trim()
+                    MediaLibrary.setVideoUrl(context, movie.mediaKey, url)
+                    savedMovieUrl = url
+                }
+            ) { Text("Сохранить для этого фильма") }
+            Text("Видеоссылка хранится локально и не извлекается из TMDB.", color = Color.LightGray)
+            Spacer(Modifier.height(12.dp))
+        }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Text("Демоисточник", color = Color.White)
             Switch(checked = demoEnabled, onCheckedChange = {
@@ -151,6 +175,7 @@ fun SourcesScreen(onPlay: (StreamItem) -> Unit, onBack: () -> Unit) {
                         Button(onClick = {
                             playerMessage = try {
                                 openInExternalPlayer(context, stream.url)
+                                if (movie != null && stream.id.startsWith("linked-")) onPlayed(movie)
                                 null
                             } catch (_: ActivityNotFoundException) {
                                 "На устройстве не найден совместимый видеоплеер. Установи VLC или другой плеер."
@@ -158,7 +183,10 @@ fun SourcesScreen(onPlay: (StreamItem) -> Unit, onBack: () -> Unit) {
                                 "Не удалось открыть внешнее приложение: ${e.message}"
                             }
                         }) { Text("▶ Внешний плеер") }
-                        TextButton(onClick = { onPlay(stream) }) {
+                        TextButton(onClick = {
+                            if (movie != null && stream.id.startsWith("linked-")) onPlayed(movie)
+                            onPlay(stream)
+                        }) {
                             Text("Встроенный плеер (резервный)")
                         }
                     }
