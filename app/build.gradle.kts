@@ -12,8 +12,8 @@ android {
         applicationId = "com.cinemahub.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 6
-        versionName = "0.5.0"
+        versionCode = 7
+        versionName = "0.6.0"
         // Optional personal-build key. Never commit an API key to the repository.
         val tmdbKey = providers.environmentVariable("TMDB_API_KEY").orNull.orEmpty()
         val sanitizedKey = tmdbKey.replace("\\", "\\\\").replace("\"", "\\\"")

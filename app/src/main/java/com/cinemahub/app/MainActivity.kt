@@ -51,6 +51,8 @@ private fun CinemaApp() {
     var selectedFilm by remember { mutableStateOf<Film?>(null) }
     val filtered = sampleFilms.filter { it.title.contains(query, ignoreCase = true) }
     var playing by remember { mutableStateOf<StreamItem?>(null) }
+    var activeMovie by remember { mutableStateOf<LibraryMovie?>(null) }
+    val context = androidx.compose.ui.platform.LocalContext.current
 
     Surface(color = Color(0xFF0D1016), modifier = Modifier.fillMaxSize()) {
         Column(modifier = Modifier.fillMaxSize()) {
@@ -74,7 +76,7 @@ private fun CinemaApp() {
             }
             if (playing == null) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 22.dp)) {
-                TextButton(onClick = { selectedTab = 4; selectedFilm = null }) {
+                TextButton(onClick = { selectedTab = 4; selectedFilm = null; activeMovie = null }) {
                     Icon(Icons.Default.PlayArrow, contentDescription = null)
                     Spacer(Modifier.width(4.dp))
                     Text("Источники / Плеер")
@@ -86,11 +88,11 @@ private fun CinemaApp() {
             } else if (selectedFilm != null) {
                 FilmDetails(film = selectedFilm!!, onBack = { selectedFilm = null })
             } else when (selectedTab) {
-                1 -> TmdbScreen(searchMode = true, onOpenSources = { selectedTab = 4 })
-                2 -> EmptyPage("Избранное", "Здесь будут храниться фильмы, которые ты добавишь в избранное.")
+                1 -> TmdbScreen(searchMode = true, onOpenSources = { activeMovie = it; selectedTab = 4 })
+                2 -> PersonalLibraryScreen(onOpenSources = { activeMovie = it; selectedTab = 4 })
                 3 -> EmptyPage("Настройки", "В следующих версиях здесь появятся настройки источников, плеера и интерфейса.")
-                4 -> SourcesScreen(onPlay = { playing = it }, onBack = { selectedTab = 0 })
-                else -> TmdbScreen(searchMode = false, onOpenSources = { selectedTab = 4 })
+                4 -> SourcesScreen(onPlay = { playing = it }, onBack = { selectedTab = if (activeMovie != null) 2 else 0; activeMovie = null }, movie = activeMovie, onPlayed = { MediaLibrary.recordPlayed(context, it) })
+                else -> TmdbScreen(searchMode = false, onOpenSources = { activeMovie = it; selectedTab = 4 })
             }
         }
     }

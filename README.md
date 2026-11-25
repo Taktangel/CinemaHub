@@ -96,3 +96,13 @@ On subsequent builds, GitHub Actions decodes the JKS into runner temporary stora
 **Migration:** Existing 0.4.x builds used unrelated debug signing keys. You may need to uninstall once to migrate to the persistent key, which clears the current API key unless separately backed up. All updates signed with the new key can then install over the previous app, provided the application ID remains the same and `versionCode` increases.
 
 **Do not distribute the persistent JKS.** For a public launch, consider production release signing, restricted CI environments, and protect the signing workflow from untrusted pull request code.
+
+
+## v0.6 personal media library
+
+- Tap **♡ В избранное** on a TMDB title details screen, then visit the heart tab to browse saved titles.
+- Tap **Мои источники** from the TMDB details or favorites. Save an authorized HTTPS MP4/HLS/DASH link associated with *that* TMDB movie or TV title.
+- Choose external or embedded player for the linked source. Opening the associated source records the title under recent history. Demo MP4 sources are separate and not associated with the title.
+- Favorites, per-title links and recent selections are stored on the device. They survive ordinary signed updates but **not** uninstall, data-clear or moving to a new device.
+- This does not discover or extract video URLs from third-party unlicensed streaming sites; TMDB is only a metadata source.
+- v0.6 does not yet support TV-specific per-season/episode link mapping, cloud synchronization, or cross-device watch history.

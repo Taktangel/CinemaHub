@@ -66,7 +66,7 @@ private fun fetchTmdb(apiKey: String, query: String, searchMode: Boolean): List<
 }
 
 @Composable
-fun TmdbScreen(searchMode: Boolean, onOpenSources: () -> Unit) {
+fun TmdbScreen(searchMode: Boolean, onOpenSources: (LibraryMovie) -> Unit) {
     val context = androidx.compose.ui.platform.LocalContext.current
     val prefs = remember(context) { context.getSharedPreferences("tmdb_settings", Context.MODE_PRIVATE) }
     val imageLoader = remember(context) { TmdbNetwork.imageLoader(context) }
@@ -136,8 +136,20 @@ fun TmdbScreen(searchMode: Boolean, onOpenSources: () -> Unit) {
                 Spacer(Modifier.height(12.dp))
                 Text(film.overview.ifBlank { "Описание пока недоступно" }, color = Color.White)
                 Spacer(Modifier.height(10.dp))
-                Button(onClick = onOpenSources) { Text("Источники и плеер (демо)") }
-                Text("Источники в этой версии не связаны с выбранным фильмом.", color = Color.LightGray)
+                val movie = LibraryMovie(
+                    MediaLibrary.key(film.kind, film.id), film.title,
+                    film.date.take(4), film.poster, film.kind
+                )
+                var isFavorite by remember(movie.mediaKey) {
+                    mutableStateOf(MediaLibrary.isFavorite(context, movie.mediaKey))
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(onClick = { onOpenSources(movie) }) { Text("Мои источники") }
+                    OutlinedButton(onClick = {
+                        isFavorite = MediaLibrary.toggleFavorite(context, movie)
+                    }) { Text(if (isFavorite) "♥ В избранном" else "♡ В избранное") }
+                }
+                Text("Привяжи собственный разрешённый видеопоток к этому фильму.", color = Color.LightGray)
             } else {
                 if (searchMode) {
                     OutlinedTextField(
