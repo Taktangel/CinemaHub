@@ -2,6 +2,9 @@ package com.cinemahub.app
 
 import android.content.Context
 import androidx.compose.foundation.layout.*
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import android.app.Activity
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
@@ -97,6 +100,21 @@ fun AniLibertySearchScreen(onBack: () -> Unit, onPlayBuiltIn: (StreamItem) -> Un
     var loading by remember { mutableStateOf(false) }
     var playLoading by remember { mutableStateOf<String?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
+    var lastPlayedEpisode by remember { mutableStateOf<String?>(null) }
+    var timeCodeText by remember { mutableStateOf("") }
+    var timeCodeEpisode by remember { mutableStateOf<String?>(null) }
+    var progressRefresh by remember { mutableIntStateOf(0) }
+    val vlcResult = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        val id = lastPlayedEpisode
+        val pos = result.data?.getLongExtra("extra_position", -1L) ?: -1L
+        if (id != null && pos >= 0L) {
+            WatchProgress.save(context, id, pos)
+            progressRefresh++
+            error = null
+        } else if (id != null) {
+            error = "VLC не вернул таймкод. Можно указать позицию вручную."
+        }
+    }
 
     LaunchedEffect(initialRelease?.id) {
         if (initialRelease != null) {
@@ -198,14 +216,39 @@ fun AniLibertySearchScreen(onBack: () -> Unit, onPlayBuiltIn: (StreamItem) -> Un
                                     (if (episode.title.isNotBlank()) " · " + episode.title else ""),
                                 style = MaterialTheme.typography.titleMedium
                             )
-                            val saved = remember(episode.id) {
-                                context.getSharedPreferences("playback_positions", Context.MODE_PRIVATE)
-                                    .getLong("position_aniliberty-${episode.id}", 0L)
-                            }
+                            val saved = remember(episode.id, progressRefresh) { WatchProgress.read(context, "aniliberty-${episode.id}") }
                             if (saved > 0L) Text(
                                 "Последняя позиция: ${saved / 60000} мин ${saved / 1000 % 60} сек (встроенный плеер)",
                                 color = Color.LightGray, style = MaterialTheme.typography.bodySmall
                             )
+                            if (timeCodeEpisode == episode.id) {
+                                OutlinedTextField(
+                                    value = timeCodeText,
+                                    onValueChange = { timeCodeText = it },
+                                    label = { Text("Таймкод ЧЧ:ММ:СС") },
+                                    singleLine = true,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    TextButton(onClick = {
+                                        val ms = WatchProgress.parse(timeCodeText)
+                                        if (ms == null) {
+                                            error = "Введите время, например 00:12:35"
+                                        } else {
+                                            WatchProgress.save(context, "aniliberty-${episode.id}", ms)
+                                            progressRefresh++
+                                            error = null
+                                            timeCodeEpisode = null
+                                        }
+                                    }) { Text("Сохранить") }
+                                    TextButton(onClick = { timeCodeEpisode = null }) { Text("Отмена") }
+                                }
+                            } else {
+                                TextButton(onClick = {
+                                    timeCodeEpisode = episode.id
+                                    timeCodeText = WatchProgress.format(saved)
+                                }) { Text("✎ Указать таймкод") }
+                            }
                             Button(enabled = playLoading == null, onClick = {
                                 scope.launch {
                                     playLoading = episode.id
@@ -228,7 +271,17 @@ fun AniLibertySearchScreen(onBack: () -> Unit, onPlayBuiltIn: (StreamItem) -> Un
                                             stream.second,
                                             "AniLiberty API v1"
                                         )
-                                        if (!PlaybackPreferences.launch(context, item.url)) {
+                                        if (PlaybackPreferences.selected(context) == "org.videolan.vlc") {
+                                            val resumeMs = WatchProgress.read(context, item.id)
+                                            val intent = PlaybackPreferences.playerIntent(item.url).apply {
+                                                setPackage("org.videolan.vlc")
+                                                putExtra("title", item.title)
+                                                putExtra("position", resumeMs)
+                                                putExtra("from_start", resumeMs == 0L)
+                                            }
+                                            lastPlayedEpisode = item.id
+                                            vlcResult.launch(intent)
+                                        } else if (!PlaybackPreferences.launch(context, item.url)) {
                                             onPlayBuiltIn(item)
                                         }
                                     } catch (e: Exception) {
