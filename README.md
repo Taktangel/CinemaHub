@@ -177,3 +177,12 @@ The user's reference repository [anilibria/docs](https://github.com/anilibria/do
 - Built-in Media3 player saves each video/episode progress separately every five seconds while playing, when backgrounded, when leaving player, and on disposal. It resumes from the saved position when a video/episode is opened again; it resets after playback reaches the end.
 - **External players (VLC, Just Player etc.) manage their own watch positions**. Android's normal ACTION_VIEW handoff does not provide CinemaHub with position callbacks. CinemaHub cannot read or guarantee automatic resume of external playback; enable resume in the selected external player if available. Switching streams or reinstalling CinemaHub resets local preferences but not necessarily the external player's own settings.
 - **Warning:** Existing debug APK signing remains ephemeral unless a persistent signing key is configured in GitHub Actions. This may require an uninstall to update, clearing CinemaHub's saved progress. Set up persistent signing before relying on history.
+
+
+## v0.11 — VLC timecode handoff and episode watch bookmarks
+
+- When VLC is the saved default player, AniLiberty episode launch uses Android's activity result API. VLC's reported `extra_position` (milliseconds) is stored by stable AniLiberty episode ID when VLC returns. On next launch, CinemaHub passes the saved position to VLC as the `position` intent extra and enables `from_start` only when no saved position exists.
+- For reliability the series list includes **Указать таймкод** to manually store a position in `HH:MM:SS`, `MM:SS` or seconds. VLC must explicitly return a position on exit; not all Android/VLC versions do so, and simply backgrounding the app may not yield a result.
+- Built-in playback position and VLC share a single per-episode key `position_aniliberty-<id>` in local app data. Other third-party players do not promise a position result.
+- **Other providers:** AnimeGO is currently a website entry; HdRezkaApi is a Python documentation entry, not integrated into Android; the two 4PDA URLs are reference links because their contents could not be verified. Only AniLiberty has an integrated search/episode API at this stage.
+- Persistent APK signing remains unconfigured; reinstalling resets saved timecodes. External VLC's own resume setting is independent; see VLC Settings → Video → Resume played videos.
