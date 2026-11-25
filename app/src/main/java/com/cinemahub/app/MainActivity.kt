@@ -193,7 +193,7 @@ private fun FilmDetails(film: Film, onBack: () -> Unit) {
 
 @Composable
 private fun EmptyPage(title: String, message: String) {
-    Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Alignment.CenterVertically, horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(Modifier.fillMaxSize().padding(24.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
         Text(title, color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.Bold)
         Spacer(Modifier.height(10.dp))
         Text(message, color = Color.Gray, fontSize = 14.sp)
