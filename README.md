@@ -154,3 +154,7 @@ The public AniLiberty API search implementation is preliminary and depends on th
 ### Version sequencing
 
 Version is `0.8.0` with `versionCode=9`. This change is stacked on the 0.7 feature branch. Merge stacked PRs in sequence if you want the new files in `main`. The persistent signing secret setup is still required for seamless APK updates.
+
+### AniLibria documentation version notice
+
+The user's reference repository [anilibria/docs](https://github.com/anilibria/docs) explicitly marks its historical `api.md`, `api_v2.md` and `api_v3.md` APIs as **DEPRECATED / retired**. Its README redirects developers to the current [AniLiberty API v1 documentation](https://anilibria.top/api/docs/v1). We intentionally use the modern public `GET /api/v1/app/search/releases?query=...` endpoint (AniLiberty host) for title search. The v1 API returns a JSON array of release objects. This implementation currently displays results and opens the provider site; it does not retrieve or play episodes. Verify public endpoint access and provider terms before expanding playback functionality.
