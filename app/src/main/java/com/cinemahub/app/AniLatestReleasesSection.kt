@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import kotlinx.coroutines.CancellationException
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
@@ -23,6 +24,8 @@ fun AniLatestReleasesSection(onSelect: (AniLibertyRelease) -> Unit, onMore: () -
         error = null
         try {
             releases = AniLibertyApi.latest()
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             error = e.message ?: "Не удалось получить свежие релизы"
         } finally { loading = false }

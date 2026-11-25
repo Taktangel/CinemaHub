@@ -2,6 +2,7 @@ package com.cinemahub.app
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.runInterruptible
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONArray
@@ -34,13 +35,14 @@ object AniLibertyEpisodesApi {
     private const val BASE = "https://aniliberty.top/api/v1"
     private val client = OkHttpClient.Builder()
         .connectTimeout(10, TimeUnit.SECONDS)
-        .readTimeout(18, TimeUnit.SECONDS)
+        .readTimeout(10, TimeUnit.SECONDS)
+        .callTimeout(15, TimeUnit.SECONDS)
         .build()
 
     private suspend fun get(path: String): String = withContext(Dispatchers.IO) {
         val request = Request.Builder().url(BASE + path)
             .header("Accept", "application/json").get().build()
-        client.newCall(request).execute().use { response ->
+        runInterruptible(Dispatchers.IO) { client.newCall(request).execute() }.use { response ->
             if (!response.isSuccessful)
                 throw IOException("AniLiberty API: HTTP " + response.code)
             val content = response.body?.string() ?: throw IOException("Пустой ответ AniLiberty")

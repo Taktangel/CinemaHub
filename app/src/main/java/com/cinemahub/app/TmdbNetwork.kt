@@ -63,7 +63,8 @@ object TmdbNetwork {
         OkHttpClient.Builder()
             .dns(dns)
             .connectTimeout(12, TimeUnit.SECONDS)
-            .readTimeout(15, TimeUnit.SECONDS)
+            .readTimeout(12, TimeUnit.SECONDS)
+            .callTimeout(20, TimeUnit.SECONDS)
             .build()
     }
 

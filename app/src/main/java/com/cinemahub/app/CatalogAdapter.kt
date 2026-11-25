@@ -13,6 +13,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.runInterruptible
 import org.json.JSONObject
 import java.io.IOException
 import java.util.concurrent.TimeUnit
@@ -44,7 +46,8 @@ object JsonCatalogAdapter : CatalogAdapter {
     private val http by lazy {
         OkHttpClient.Builder()
             .connectTimeout(8, TimeUnit.SECONDS)
-            .readTimeout(12, TimeUnit.SECONDS)
+            .readTimeout(10, TimeUnit.SECONDS)
+            .callTimeout(15, TimeUnit.SECONDS)
             .followRedirects(false)
             .build()
     }
@@ -78,7 +81,7 @@ object JsonCatalogAdapter : CatalogAdapter {
         val url = catalogUrl(context)
         if (!allowedUrl(url)) throw IOException("Введите публичный HTTPS-адрес JSON-каталога.")
         val request = Request.Builder().url(url).get().build()
-        http.newCall(request).execute().use { response ->
+        runInterruptible(Dispatchers.IO) { http.newCall(request).execute() }.use { response ->
             if (!response.isSuccessful) throw IOException("Каталог вернул HTTP ${response.code}")
             val body = response.body?.string() ?: throw IOException("Пустой каталог")
             if (body.length > 1_000_000) throw IOException("Каталог слишком большой (макс. 1 МБ)")
@@ -116,7 +119,7 @@ object JsonCatalogAdapter : CatalogAdapter {
 }
 
 @Composable
-fun CatalogAdapterSettingsScreen(onOpenProviders: () -> Unit = {}) {
+fun CatalogAdapterSettingsScreen(onOpenProviders: () -> Unit = {}, onBack: () -> Unit = {}) {
     val context = LocalContext.current
     var url by remember { mutableStateOf(JsonCatalogAdapter.catalogUrl(context)) }
     var enabled by remember { mutableStateOf(JsonCatalogAdapter.isEnabled(context)) }
@@ -126,6 +129,7 @@ fun CatalogAdapterSettingsScreen(onOpenProviders: () -> Unit = {}) {
     val valid = url.isBlank() || (url.startsWith("https://") && isSupportedStreamUrl(url))
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        TextButton(onClick = onBack) { Text("← На главную") }
         PlaybackSettingsSection()
         HorizontalDivider()
         Text("Подключаемые источники", color = Color.White, style = MaterialTheme.typography.headlineSmall)
@@ -161,6 +165,8 @@ fun CatalogAdapterSettingsScreen(onOpenProviders: () -> Unit = {}) {
             try {
                 itemCount = JsonCatalogAdapter.load(context).size
                 notice = "Каталог успешно прочитан."
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
                 itemCount = null
                 notice = "Ошибка: ${e.message ?: "неизвестная ошибка"}"
