@@ -55,3 +55,11 @@ Do not commit API keys, `local.properties`, local build artifacts, or signing ke
 Movie metadata is separate from access to video content. This project does not contain copyrighted video or tools to bypass access controls.
 
 Project repository: https://github.com/Taktangel/CinemaHub
+
+
+## v0.4 TMDB networking and optional key
+
+- When Android DNS resolves `api.themoviedb.org` or `image.tmdb.org` only to loopback, the app uses Quad9's `https://dns10.quad9.net/dns-query` via bootstrap addresses `9.9.9.10` and `149.112.112.10` for those hosts. HTTPS certificate validation is retained. Regular addresses use the Android DNS resolver. This cannot fix a blocked HTTPS connection or unavailable Quad9 service.
+- TMDB v3 key entered in the app is retained across ordinary updates with the same application ID and signing certificate. Do **not** uninstall or clear app data if you want to retain it.
+- To preconfigure a key in your *personal build*, set a repository **Actions secret** named `TMDB_API_KEY` at GitHub Settings → Secrets and variables → Actions. The workflow uses it for the build. Do not paste it into source code, commits, PRs or logs.
+- **Important:** any key embedded in an APK can be extracted by recipients. This secret-based method keeps the key out of Git history but **does not make it secret inside the APK**. Avoid distributing personalized APKs; use a backend API for production. CI build artifacts may be accessible to others in a public repository.
